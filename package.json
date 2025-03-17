@@ -1,3 +1,6 @@
+// This file contains the package.json configuration for the ConfidentKids application
+// It defines all dependencies and scripts needed to run the application
+
 {
   "name": "confident-kids-app",
   "version": "0.1.0",
@@ -48,4 +51,3 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }
-
