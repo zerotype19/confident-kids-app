@@ -1,0 +1,110 @@
+// This file contains the database schema for the ConfidentKids application
+// It uses Prisma ORM syntax which is compatible with Cloudflare D1 database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User profiles (extended from Clerk.dev)
+model UserProfile {
+  id                String         @id @default(uuid())
+  clerkId           String         @unique
+  email             String         @unique
+  firstName         String?
+  lastName          String?
+  subscriptionTier  String         @default("basic")
+  subscriptionStatus String        @default("active")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  children          Child[]
+  subscription      Subscription?
+}
+
+// Children profiles
+model Child {
+  id                String         @id @default(uuid())
+  userId            String
+  firstName         String
+  age               Int
+  avatar            String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              UserProfile    @relation(fields: [userId], references: [id])
+  progress          Progress[]
+  assessments       Assessment[]
+}
+
+// Pillars reference table
+model Pillar {
+  id                Int            @id @default(autoincrement())
+  name              String
+  slug              String         @unique
+  description       String
+  icon              String?
+  color             String?
+  activities        Activity[]
+  progress          Progress[]
+  assessments       Assessment[]
+}
+
+// Activities
+model Activity {
+  id                String         @id @default(uuid())
+  title             String
+  description       String
+  pillarId          Int
+  minAge            Int
+  maxAge            Int
+  durationMinutes   Int?
+  instructions      String
+  materials         String?
+  difficulty        String         // "easy", "medium", "hard"
+  createdAt         DateTime       @default(now())
+  pillar            Pillar         @relation(fields: [pillarId], references: [id])
+  progress          Progress[]
+}
+
+// Progress tracking
+model Progress {
+  id                String         @id @default(uuid())
+  childId           String
+  pillarId          Int
+  activityId        String
+  completedAt       DateTime       @default(now())
+  notes             String?
+  rating            Int?
+  child             Child          @relation(fields: [childId], references: [id])
+  pillar            Pillar         @relation(fields: [pillarId], references: [id])
+  activity          Activity       @relation(fields: [activityId], references: [id])
+}
+
+// Assessments
+model Assessment {
+  id                String         @id @default(uuid())
+  childId           String
+  pillarId          Int
+  score             Int
+  completedAt       DateTime       @default(now())
+  child             Child          @relation(fields: [childId], references: [id])
+  pillar            Pillar         @relation(fields: [pillarId], references: [id])
+}
+
+// Subscriptions
+model Subscription {
+  id                String         @id @default(uuid())
+  userId            String         @unique
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  planType          String         // "basic", "family", "premium"
+  status            String
+  currentPeriodStart DateTime?
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              UserProfile    @relation(fields: [userId], references: [id])
+}
