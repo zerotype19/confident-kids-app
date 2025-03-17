@@ -1,0 +1,35 @@
+# This is the Cloudflare Workers configuration file
+# It defines how your application will be deployed to Cloudflare
+
+name = "confident-kids-app"
+compatibility_date = "2023-01-01"
+
+# Main application configuration
+[site]
+bucket = ".next" # Output directory from Next.js build
+
+# D1 Database configuration
+[[d1_databases]]
+binding = "DB" # This name is used in your code to reference the database
+database_name = "confident_kids_db"
+database_id = "YOUR_DATABASE_ID" # Replace with your actual database ID after creation
+
+# Environment variables configuration
+[vars]
+# These are public environment variables (non-sensitive)
+NEXT_PUBLIC_BASE_URL = "https://your-domain.com" # Replace with your actual domain
+
+# KV namespace for caching (optional but recommended)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "YOUR_KV_NAMESPACE_ID" # Replace after creating in Cloudflare dashboard
+
+# Routes configuration
+[routes]
+pattern = "/*"
+script = "index.js"
+
+# Build configuration for Cloudflare Pages
+[build]
+command = "npm run build"
+output_directory = ".next"
