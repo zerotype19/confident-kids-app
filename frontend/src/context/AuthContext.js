@@ -2,6 +2,9 @@ import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
+// Replace local API URLs with your Cloudflare Worker URL
+const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
+
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
