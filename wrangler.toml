@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2023-01-01"
 
 [vars]
-JWT_SECRET = "your_jwt_secret_key"
+JWT_SECRET = "Ay8GGtJ2RKRerBo5o8YvC2mbs5zm0zMbcntl7GbxbAc="
 
 [[d1_databases]]
 binding = "DB"
