@@ -1,0 +1,26 @@
+# Netlify configuration file
+# This file configures how the site is deployed on Netlify
+
+# Settings for build
+[build]
+  # Directory to publish (the build output)
+  publish = "frontend/build"
+  # Command to build the site
+  command = "cd frontend && npm install && npm run build"
+
+# Redirects and rewrites
+[[redirects]]
+  # SPA redirect - send all routes to index.html
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers to set
+[[headers]]
+  # Define headers for all files
+  for = "/*"
+    [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer-when-downgrade"

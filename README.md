@@ -1,108 +1,129 @@
-# ConfidentKids SaaS Application
+# Confident Kids App
 
-This repository contains the complete codebase for the ConfidentKids SaaS application, a platform designed to help parents raise confident, resilient children through the 5 Pillars of Confidence framework.
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Directory Structure](#directory-structure)
-- [Setup Instructions](#setup-instructions)
-- [Account Creation Guide](#account-creation-guide)
-- [Development Guide](#development-guide)
-- [Deployment Guide](#deployment-guide)
-- [Customization Guide](#customization-guide)
+A web application for helping parents build confidence in their children based on the "Raising Confident Kids" playbook.
 
 ## Overview
 
-ConfidentKids is a Next.js application with a Cloudflare Workers backend and D1 database. The application provides:
+This application implements a SaaS platform targeting parents of children in different age groups (toddlers 2-5, elementary 6-11, teens 12+) focused on helping kids gain confidence through 5 key pillars:
 
-- A research-backed framework for building confidence in children
-- Age-appropriate activities for toddlers (2-5), elementary (6-11), and teens (12+)
-- Progress tracking and personalized recommendations
-- Subscription-based monetization
+1. Independence & Problem-Solving
+2. Growth Mindset & Resilience
+3. Social Confidence & Communication
+4. Purpose & Strength Discovery
+5. Managing Fear & Anxiety
 
-## Directory Structure
+## Technology Stack
 
+- MongoDB for database
+- Node.js and Express for backend
+- React for frontend
+- JWT for authentication
+
+## Features
+
+- User authentication and profile management
+- Content delivery based on the 5 pillars
+- Age-specific content adaptation
+- Progress tracking
+- Daily challenges and 30-day challenge calendar
+- Notification system
+
+## Project Structure
+
+The application follows a microservices architecture with the following services:
+
+- **User Service**: Handles user authentication and profile management
+- **Content Service**: Manages and delivers educational content
+- **Progress Service**: Tracks and reports user progress
+- **Challenge Service**: Manages daily and custom challenges
+- **Notification Service**: Sends reminders and updates to users
+
+## Installation
+
+### Prerequisites
+
+- Node.js (v14+)
+- MongoDB
+
+### Setup
+
+1. Clone the repository
 ```
-confident-kids-app/
-├── docs/                      # Documentation files
-│   ├── account_creation_guide.md    # Guide for setting up all required accounts
-│   ├── final_deliverable.md         # Complete SaaS solution overview
-│   ├── launch_instructions.md       # Step-by-step launch instructions
-│   ├── marketing_plan.md            # Marketing strategy and plan
-│   ├── product_roadmap.md           # 18-month product development roadmap
-│   ├── saas_proposal.md             # Original SaaS application proposal
-│   └── technical_implementation_guide.md  # Technical implementation details
-├── migrations/                # Database migration files
-├── public/                    # Static assets
-├── scripts/                   # Utility scripts
-├── seed/                      # Seed data for database
-└── src/                       # Source code
-    ├── app/                   # Next.js App Router pages
-    ├── components/            # Reusable UI components
-    ├── hooks/                 # Custom React hooks
-    └── lib/                   # Utility functions
+git clone <repository-url>
+cd confident-kids-app
 ```
 
-## Setup Instructions
+2. Install dependencies
+```
+npm install
+```
 
-For complete setup instructions, please refer to the following documentation:
+3. Set up environment variables
+Create a `.env` file in the root directory with the following variables:
+```
+MONGODB_URI=mongodb://localhost:27017/confident-kids
+JWT_SECRET=your_jwt_secret_key
+PORT=5000
+NODE_ENV=development
+```
 
-1. [Technical Implementation Guide](./docs/technical_implementation_guide.md) - Comprehensive technical details
-2. [Launch Instructions](./docs/launch_instructions.md) - Step-by-step launch process
-3. [Account Creation Guide](./docs/account_creation_guide.md) - Setting up all required accounts
+4. Seed the database
+```
+node config/seed.js
+```
 
-## Account Creation Guide
+5. Start the application
+```
+npm start
+```
 
-Before implementing the application, you'll need to create accounts with the following services:
+## Usage
 
-1. **Cloudflare** - For hosting, database, and domain management
-2. **Clerk.dev** - For user authentication
-3. **Stripe** - For payment processing
-4. **SendGrid** - For email notifications
-5. **Mixpanel** - For analytics
-6. **Google Analytics** - For website traffic insights
+After starting the application, you can access it at `http://localhost:5000`.
 
-Detailed instructions for setting up each account are provided in the [Account Creation Guide](./docs/account_creation_guide.md).
+1. Register a new account
+2. Add your children to your profile
+3. Explore the 5 pillars of confidence
+4. Complete daily challenges
+5. Track your progress
 
-## Development Guide
+## API Endpoints
 
-For developers implementing this application:
+### User Management
+- POST /api/users/register
+- POST /api/users/login
+- GET /api/users/profile
+- PUT /api/users/profile
+- POST /api/users/child
 
-1. Follow the technical implementation guide for architecture details
-2. Use the provided database schema for data modeling
-3. Implement the UI based on the design specifications
-4. Connect all third-party services using the API keys from account setup
+### Content
+- GET /api/content/pillars
+- GET /api/content/pillar/:id
+- GET /api/content/techniques/:pillarId
+- GET /api/content/technique/:id
+- GET /api/content/age-group/:group
 
-## Deployment Guide
+### Progress
+- POST /api/progress/track
+- GET /api/progress/user
+- GET /api/progress/pillar/:pillarId
+- GET /api/progress/summary
+- PUT /api/progress/:id
 
-To deploy the application:
+### Challenges
+- GET /api/challenges/daily
+- GET /api/challenges/calendar
+- POST /api/challenges/complete
+- GET /api/challenges/custom
+- POST /api/challenges/custom
 
-1. Set up a Cloudflare account and create a Pages project
-2. Configure your D1 database
-3. Set up all environment variables
-4. Deploy the application using the Cloudflare Pages GitHub integration
+### Notifications
+- POST /api/notifications/send
+- GET /api/notifications/user
+- GET /api/notifications/all
+- PUT /api/notifications/read/:id
+- PUT /api/notifications/read-all
 
-## Customization Guide
+## License
 
-The application can be customized in various ways:
-
-1. Branding - Update colors, logos, and messaging
-2. Content - Modify activities and pillar content
-3. Pricing - Adjust subscription tiers and pricing
-4. Features - Add or remove features based on your requirements
-
-## Business Strategy
-
-For a complete business strategy, refer to:
-
-1. [SaaS Proposal](./docs/saas_proposal.md) - Initial business concept
-2. [Marketing Plan](./docs/marketing_plan.md) - Comprehensive marketing strategy
-3. [Product Roadmap](./docs/product_roadmap.md) - 18-month development plan
-
-## Support
-
-For any questions or assistance with implementation, please contact:
-
-- Email: support@confidentkids.com
-- Website: https://confidentkids.com
+This project is licensed under the MIT License.
