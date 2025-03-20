@@ -1,34 +1,45 @@
-// src/index.js
-export default {
-  async fetch(request, env, ctx) {
+// src/index.js - Complete working version
+
+// Create a router for handling requests
+const router = {
+  routes: {
+    GET: {},
+    POST: {},
+    PUT: {},
+    DELETE: {},
+    OPTIONS: {}
+  },
+  
+  get(path, handler) {
+    this.routes.GET[path] = handler;
+  },
+  
+  post(path, handler) {
+    this.routes.POST[path] = handler;
+  },
+  
+  options(path, handler) {
+    this.routes.OPTIONS[path] = handler;
+  },
+  
+  handle(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
+    const method = request.method;
     
-    // CORS headers
-    const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',  // Or your specific domain
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-};
-
-// Add these headers to all responses
-
-    
-    // Handle OPTIONS requests
-    if (request.method === 'OPTIONS') {
+    // Handle OPTIONS requests for CORS
+    if (method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
         headers: corsHeaders
       });
     }
     
-    // Simple router
-    if (path === '/api/users/register' && request.method === 'POST') {
-      return handleRegister(request, env, corsHeaders);
-    } else if (path === '/api/users/login' && request.method === 'POST') {
-      return handleLogin(request, env, corsHeaders);
-    } else if (path === '/api/seed' && request.method === 'GET') {
-      return handleSeed(request, env, corsHeaders);
+    // Find the matching route handler
+    const handler = this.routes[method][path];
+    
+    if (handler) {
+      return handler(request, env, ctx);
     }
     
     // Default 404 response
@@ -39,7 +50,117 @@ export default {
   }
 };
 
-async function handleRegister(request, env, corsHeaders) {
+// CORS headers for all responses
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+};
+
+// Test endpoint
+router.get('/api/test', (request, env) => {
+  return new Response(JSON.stringify({ message: 'API is working!' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+  });
+});
+
+// Database check endpoint
+router.get('/api/db-check', async (request, env) => {
+  try {
+    // Try a simple query
+    const result = await env.DB.prepare('SELECT sqlite_version()').first();
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Database connection successful',
+      version: result 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Table check endpoint
+router.get('/api/table-check', async (request, env) => {
+  try {
+    // Check if tables exist
+    const tables = await env.DB.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table'"
+    ).all();
+    
+    // Get structure of users table if it exists
+    let userColumns = [];
+    if (tables.results.some(table => table.name === 'users')) {
+      userColumns = await env.DB.prepare(
+        "PRAGMA table_info(users)"
+      ).all();
+    }
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      tables: tables.results,
+      userColumns: userColumns.results || []
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Database write test endpoint
+router.get('/api/db-test', async (request, env) => {
+  try {
+    // Try a simple insert
+    const result = await env.DB.prepare(
+      'INSERT INTO users (id, name, email, password, created_at) VALUES (?, ?, ?, ?, ?)'
+    ).bind(
+      crypto.randomUUID(),
+      'Test User',
+      `test${Date.now()}@example.com`, // Add timestamp to make email unique
+      'password123',
+      Date.now()
+    ).run();
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Database write successful',
+      result: result 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// User registration endpoint
+router.post('/api/users/register', async (request, env) => {
   try {
     const { name, email, password } = await request.json();
     
@@ -63,16 +184,15 @@ async function handleRegister(request, env, corsHeaders) {
       });
     }
     
-    // Generate a simple ID
+    // Generate ID
     const userId = crypto.randomUUID();
     
-    // Store password as plain text for this simplified example
-    // In production, you should use proper password hashing
+    // Insert user
     await env.DB.prepare(
       'INSERT INTO users (id, name, email, password, created_at) VALUES (?, ?, ?, ?, ?)'
     ).bind(userId, name, email, password, Date.now()).run();
     
-    // Create a simple token
+    // Generate token
     const token = btoa(JSON.stringify({ id: userId, name, email }));
     
     return new Response(JSON.stringify({ token }), {
@@ -80,14 +200,18 @@ async function handleRegister(request, env, corsHeaders) {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      stack: error.stack
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
-}
+});
 
-async function handleLogin(request, env, corsHeaders) {
+// User login endpoint
+router.post('/api/users/login', async (request, env) => {
   try {
     const { email, password } = await request.json();
     
@@ -111,7 +235,7 @@ async function handleLogin(request, env, corsHeaders) {
       });
     }
     
-    // Create a simple token
+    // Generate token
     const token = btoa(JSON.stringify({ id: user.id, name: user.name, email: user.email }));
     
     return new Response(JSON.stringify({ token }), {
@@ -124,77 +248,11 @@ async function handleLogin(request, env, corsHeaders) {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
-}
+});
 
-async function handleSeed(request, env, corsHeaders) {
-  try {
-    // Create tables if they don't exist
-    await env.DB.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at INTEGER NOT NULL
-      );
-      
-      CREATE TABLE IF NOT EXISTS children (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        age INTEGER NOT NULL,
-        age_group TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      );
-      
-      CREATE TABLE IF NOT EXISTS content (
-        id TEXT PRIMARY KEY,
-        pillar_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT NOT NULL,
-        age_group TEXT NOT NULL,
-        content_type TEXT NOT NULL,
-        content_data TEXT NOT NULL
-      );
-    `);
-    
-    // Seed some basic content
-    const pillars = [
-      {
-        id: 1,
-        title: 'Independence & Problem-Solving',
-        description: 'Help your child develop independence and problem-solving skills.'
-      },
-      {
-        id: 2,
-        title: 'Growth Mindset & Resilience',
-        description: 'Foster a growth mindset and resilience in your child.'
-      }
-    ];
-    
-    for (const pillar of pillars) {
-      await env.DB.prepare(
-        'INSERT OR IGNORE INTO content (id, pillar_id, title, description, age_group, content_type, content_data) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).bind(
-        `pillar_${pillar.id}`,
-        pillar.id,
-        pillar.title,
-        pillar.description,
-        'all',
-        'pillar',
-        JSON.stringify(pillar)
-      ).run();
-    }
-    
-    return new Response(JSON.stringify({ message: 'Database seeded successfully' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
-    });
+// Export default function to handle requests
+export default {
+  async fetch(request, env, ctx) {
+    return router.handle(request, env, ctx);
   }
-}
+};
