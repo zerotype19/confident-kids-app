@@ -9,3 +9,11 @@ ReactDOM.render(
   </React.StrictMode>,
   document.getElementById('root')
 );
+
+// Add this to your router definitions
+router.get('/api/test', () => {
+  return new Response(JSON.stringify({ message: 'API is working!' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+  });
+});
