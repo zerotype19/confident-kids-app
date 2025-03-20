@@ -1,0 +1,12 @@
+name = "confident-kids-api"
+main = "src/index.js"
+compatibility_date = "2023-01-01"
+
+[vars]
+JWT_SECRET = "your_jwt_secret_key"
+MONGODB_URI = "mongodb+srv://kevinmcgovern:TmVIYl5xcoqDEMBa@cluster0.vdi14.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "confident-kids-db"
+database_id = "your-database-id-from-step-4-4"
