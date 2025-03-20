@@ -6,10 +6,13 @@ export default {
     
     // CORS headers
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    };
+  'Access-Control-Allow-Origin': '*',  // Or your specific domain
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+};
+
+// Add these headers to all responses
+
     
     // Handle OPTIONS requests
     if (request.method === 'OPTIONS') {
