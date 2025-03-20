@@ -1,33 +1,74 @@
-// src/index.js - Complete working version
+// src/index.js - Complete working version with path parameter support
 
 // Create a router for handling requests
 const router = {
   routes: {
-    GET: {},
-    POST: {},
-    PUT: {},
-    DELETE: {},
-    OPTIONS: {}
+    GET: [],
+    POST: [],
+    PUT: [],
+    DELETE: [],
+    OPTIONS: []
   },
   
   get(path, handler) {
-    this.routes.GET[path] = handler;
+    this.routes.GET.push({ path, handler });
   },
   
   post(path, handler) {
-    this.routes.POST[path] = handler;
+    this.routes.POST.push({ path, handler });
   },
   
   put(path, handler) {
-    this.routes.PUT[path] = handler;
+    this.routes.PUT.push({ path, handler });
   },
   
   delete(path, handler) {
-    this.routes.DELETE[path] = handler;
+    this.routes.DELETE.push({ path, handler });
   },
   
   options(path, handler) {
-    this.routes.OPTIONS[path] = handler;
+    this.routes.OPTIONS.push({ path, handler });
+  },
+  
+  // Find matching route and extract path parameters
+  findRoute(method, path) {
+    const routes = this.routes[method];
+    
+    // First try exact match
+    const exactMatch = routes.find(route => route.path === path);
+    if (exactMatch) {
+      return { route: exactMatch, params: {} };
+    }
+    
+    // Then try pattern matching
+    for (const route of routes) {
+      const pattern = route.path;
+      
+      // Skip if no parameters in pattern
+      if (!pattern.includes(':')) continue;
+      
+      // Convert route pattern to regex
+      const paramNames = [];
+      const regexPattern = pattern.replace(/:[^\/]+/g, (match) => {
+        paramNames.push(match.substring(1));
+        return '([^/]+)';
+      });
+      
+      const regex = new RegExp(`^${regexPattern}$`);
+      const match = path.match(regex);
+      
+      if (match) {
+        // Extract parameters
+        const params = {};
+        match.slice(1).forEach((value, index) => {
+          params[paramNames[index]] = value;
+        });
+        
+        return { route, params };
+      }
+    }
+    
+    return null;
   },
   
   handle(request, env, ctx) {
@@ -44,10 +85,12 @@ const router = {
     }
     
     // Find the matching route handler
-    const handler = this.routes[method][path];
+    const routeMatch = this.findRoute(method, path);
     
-    if (handler) {
-      return handler(request, env, ctx);
+    if (routeMatch) {
+      // Add params to request object
+      request.params = routeMatch.params;
+      return routeMatch.route.handler(request, env, ctx);
     }
     
     // Default 404 response
@@ -437,8 +480,7 @@ router.get('/api/content/pillars', async (request, env) => {
 // Get content for a specific pillar
 router.get('/api/content/pillar/:id', async (request, env) => {
   try {
-    const url = new URL(request.url);
-    const id = url.pathname.split('/').pop();
+    const id = request.params.id;
     
     // Get techniques for the pillar
     const techniques = [
