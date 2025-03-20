@@ -1,14 +1,14 @@
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   created_at INTEGER NOT NULL
-) ;
+);
 
 -- Children table
-CREATE TABLE children (
+CREATE TABLE IF NOT EXISTS children (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE children (
 );
 
 -- Content table
-CREATE TABLE content (
+CREATE TABLE IF NOT EXISTS content (
   id TEXT PRIMARY KEY,
   pillar_id INTEGER NOT NULL,
   title TEXT NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE content (
 );
 
 -- Progress table
-CREATE TABLE progress (
+CREATE TABLE IF NOT EXISTS progress (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   child_id TEXT NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE progress (
 );
 
 -- Challenges table
-CREATE TABLE challenges (
+CREATE TABLE IF NOT EXISTS challenges (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE challenges (
 );
 
 -- Challenge completions table
-CREATE TABLE challenge_completions (
+CREATE TABLE IF NOT EXISTS challenge_completions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   child_id TEXT NOT NULL,
