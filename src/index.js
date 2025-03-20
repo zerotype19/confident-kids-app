@@ -160,14 +160,18 @@ router.get('/api/db-test', async (request, env) => {
   }
 });
 
-// User registration endpoint
-router.post('/api/users/register', async (request, env) => {
+/router.post('/api/users/register', async (request, env) => {
   try {
-    const { name, email, password } = await request.json();
+    // Log the request
+    console.log('Registration request received');
     
-    // Validate input
-    if (!name || !email || !password) {
-      return new Response(JSON.stringify({ error: 'Please provide all required fields' }), {
+    // Parse the request body
+    const data = await request.json();
+    console.log('Request data:', data);
+    
+    // Validate required fields
+    if (!data.name || !data.email || !data.password) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
@@ -176,7 +180,7 @@ router.post('/api/users/register', async (request, env) => {
     // Check if user already exists
     const existingUser = await env.DB.prepare(
       'SELECT * FROM users WHERE email = ?'
-    ).bind(email).first();
+    ).bind(data.email).first();
     
     if (existingUser) {
       return new Response(JSON.stringify({ error: 'User already exists' }), {
@@ -185,31 +189,32 @@ router.post('/api/users/register', async (request, env) => {
       });
     }
     
-    // Generate ID
+    // Generate a user ID
     const userId = crypto.randomUUID();
     
-    // Insert user
+    // Insert the user
     await env.DB.prepare(
       'INSERT INTO users (id, name, email, password, created_at) VALUES (?, ?, ?, ?, ?)'
-    ).bind(userId, name, email, password, Date.now()).run();
+    ).bind(userId, data.name, data.email, data.password, Date.now()).run();
     
-    // Generate token
-    const token = btoa(JSON.stringify({ id: userId, name, email }));
+    // Create a simple token
+    const token = btoa(JSON.stringify({ id: userId, name: data.name, email: data.email }));
     
+    // Return a success response
     return new Response(JSON.stringify({ token }), {
       status: 201,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack
-    }), {
+    console.error('Registration error:', error);
+    
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 });
+
 
 // User login endpoint
 router.post('/api/users/login', async (request, env) => {
