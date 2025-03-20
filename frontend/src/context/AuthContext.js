@@ -35,25 +35,25 @@ export const AuthProvider = ({ children })  => {
   }, []);
 
   // Set auth token in headers
-  const setAuthToken = (token) => {
-    if (token) {
-      axios.defaults.headers.common['x-auth-token'] = token;
-    } else {
-      delete axios.defaults.headers.common['x-auth-token'];
-    }
-  };
+const setAuthToken = (token) => {
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+};
 
   // Register user
   const register = async (formData) => {
     try {
       // FIXED: Added API_URL here
-      const res = await axios.post(`${API_URL}/api/users/register`, formData);
+      const res = await axios.post('${API_URL}/api/users/register', formData);
       localStorage.setItem('token', res.data.token);
       setAuthToken(res.data.token);
       
       // Load user data
       // FIXED: Added API_URL here
-      const userRes = await axios.get(`${API_URL}/api/users/profile`);
+      const userRes = await axios.get('${API_URL}/api/users/profile');
       setUser(userRes.data);
       setIsAuthenticated(true);
       setError(null);
