@@ -9,4 +9,4 @@ MONGODB_URI = "mongodb+srv://kevinmcgovern:TmVIYl5xcoqDEMBa@cluster0.vdi14.mongo
 [[d1_databases]]
 binding = "DB"
 database_name = "confident-kids-db"
-database_id = "your-database-id-from-step-4-4"
+database_id = "eaa04abe-fb61-4852-8ce0-0ef55cce357a"
