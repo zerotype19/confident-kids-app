@@ -9,11 +9,3 @@ ReactDOM.render(
   </React.StrictMode>,
   document.getElementById('root')
 );
-
-// In your fetch handler
-if (path === '/api/test' && request.method === 'GET') {
-  return new Response(JSON.stringify({ message: 'API is working!' }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders }
-  });
-}
