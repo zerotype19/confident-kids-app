@@ -5,8 +5,7 @@ const AuthContext = createContext();
 // Replace local API URLs with your Cloudflare Worker URL
 const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
 
-
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children })  => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -18,7 +17,8 @@ export const AuthProvider = ({ children }) => {
       if (localStorage.token) {
         setAuthToken(localStorage.token);
         try {
-          const res = await axios.get('/api/users/profile');
+          // FIXED: Added API_URL here
+          const res = await axios.get(`${API_URL}/api/users/profile`);
           setUser(res.data);
           setIsAuthenticated(true);
         } catch (err) {
@@ -46,12 +46,14 @@ export const AuthProvider = ({ children }) => {
   // Register user
   const register = async (formData) => {
     try {
-      const res = await axios.post('/api/users/register', formData);
+      // FIXED: Added API_URL here
+      const res = await axios.post(`${API_URL}/api/users/register`, formData);
       localStorage.setItem('token', res.data.token);
       setAuthToken(res.data.token);
       
       // Load user data
-      const userRes = await axios.get('/api/users/profile');
+      // FIXED: Added API_URL here
+      const userRes = await axios.get(`${API_URL}/api/users/profile`);
       setUser(userRes.data);
       setIsAuthenticated(true);
       setError(null);
@@ -65,12 +67,14 @@ export const AuthProvider = ({ children }) => {
   // Login user
   const login = async (email, password) => {
     try {
-      const res = await axios.post('/api/users/login', { email, password });
+      // FIXED: Added API_URL here
+      const res = await axios.post(`${API_URL}/api/users/login`, { email, password });
       localStorage.setItem('token', res.data.token);
       setAuthToken(res.data.token);
       
       // Load user data
-      const userRes = await axios.get('/api/users/profile');
+      // FIXED: Added API_URL here
+      const userRes = await axios.get(`${API_URL}/api/users/profile`);
       setUser(userRes.data);
       setIsAuthenticated(true);
       setError(null);
@@ -92,7 +96,8 @@ export const AuthProvider = ({ children }) => {
   // Update user profile
   const updateProfile = async (formData) => {
     try {
-      const res = await axios.put('/api/users/profile', formData);
+      // FIXED: Added API_URL here
+      const res = await axios.put(`${API_URL}/api/users/profile`, formData);
       setUser(res.data);
       setError(null);
       return true;
@@ -105,7 +110,8 @@ export const AuthProvider = ({ children }) => {
   // Add child to profile
   const addChild = async (childData) => {
     try {
-      const res = await axios.post('/api/users/child', childData);
+      // FIXED: Added API_URL here
+      const res = await axios.post(`${API_URL}/api/users/child`, childData);
       setUser(res.data);
       setError(null);
       return true;

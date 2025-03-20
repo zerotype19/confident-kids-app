@@ -52,10 +52,11 @@ const router = {
 
 // CORS headers for all responses
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://confident-kids-app2.pages.dev',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
+
 
 // Test endpoint
 router.get('/api/test', (request, env) => {
