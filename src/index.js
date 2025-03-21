@@ -1084,6 +1084,30 @@ router.get('/api/pillars', async (request, env) => {
   }
 });
 
+// Get challenges for a specific pillar
+router.get('/api/pillars/:id/challenges', async (request, env) => {
+  try {
+    const { id } = request.params;
+    
+    const challenges = await env.DB.prepare(
+      'SELECT * FROM challenges WHERE pillar_id = ? ORDER BY id'
+    ).bind(id).all();
+    
+    return new Response(JSON.stringify(challenges.results), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
 // Content endpoints
 router.get('/api/content', async (request, env) => {
   try {
