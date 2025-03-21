@@ -1062,6 +1062,457 @@ async function checkAndUpdateAchievements(userId, childId, env) {
   }
 }
 
+// Pillars endpoints
+router.get('/api/pillars', async (request, env) => {
+  try {
+    const pillars = await env.DB.prepare(
+      'SELECT * FROM pillars ORDER BY id'
+    ).all();
+    
+    return new Response(JSON.stringify(pillars.results), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Content endpoints
+router.get('/api/content', async (request, env) => {
+  try {
+    const content = await env.DB.prepare(
+      'SELECT * FROM content ORDER BY id'
+    ).all();
+    
+    return new Response(JSON.stringify(content.results), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Challenges endpoints
+router.get('/api/challenges', async (request, env) => {
+  try {
+    const challenges = await env.DB.prepare(
+      'SELECT * FROM challenges ORDER BY id'
+    ).all();
+    
+    return new Response(JSON.stringify(challenges.results), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+router.get('/api/challenges/daily', async (request, env) => {
+  try {
+    // Get today's challenge based on the current date
+    const today = new Date().toISOString().split('T')[0];
+    const challenge = await env.DB.prepare(
+      'SELECT * FROM challenges WHERE date = ? ORDER BY RANDOM() LIMIT 1'
+    ).bind(today).first();
+    
+    if (!challenge) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'No challenge available for today' 
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    return new Response(JSON.stringify(challenge), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+router.post('/api/challenges/:id/complete', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { id } = request.params;
+    const { childId } = await request.json();
+
+    // Verify child belongs to user
+    const child = await env.DB.prepare(
+      'SELECT * FROM children WHERE id = ? AND user_id = ?'
+    ).bind(childId, user.id).first();
+
+    if (!child) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Child not found or access denied' 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Mark challenge as complete
+    await env.DB.prepare(
+      'INSERT INTO challenge_completions (challenge_id, child_id, completed_at) VALUES (?, ?, ?)'
+    ).bind(id, childId, new Date().toISOString()).run();
+
+    // Check and update achievements
+    await checkAndUpdateAchievements(user.id, childId, env);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Challenge completed successfully' 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Achievements endpoints
+router.get('/api/achievements', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { childId } = request.query;
+
+    // Get all achievements with completion status for the child
+    const achievements = await env.DB.prepare(`
+      SELECT a.*, 
+             CASE WHEN ac.child_id IS NOT NULL THEN 1 ELSE 0 END as completed,
+             ac.completed_at
+      FROM achievements a
+      LEFT JOIN achievement_completions ac ON a.id = ac.achievement_id 
+        AND ac.child_id = ?
+      ORDER BY a.id
+    `).bind(childId).all();
+
+    return new Response(JSON.stringify(achievements.results), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+router.post('/api/achievements/:id/claim', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { id } = request.params;
+    const { childId } = await request.json();
+
+    // Verify child belongs to user
+    const child = await env.DB.prepare(
+      'SELECT * FROM children WHERE id = ? AND user_id = ?'
+    ).bind(childId, user.id).first();
+
+    if (!child) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Child not found or access denied' 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Check if achievement is already claimed
+    const existing = await env.DB.prepare(
+      'SELECT * FROM achievement_completions WHERE achievement_id = ? AND child_id = ?'
+    ).bind(id, childId).first();
+
+    if (existing) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Achievement already claimed' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Claim achievement
+    await env.DB.prepare(
+      'INSERT INTO achievement_completions (achievement_id, child_id, completed_at) VALUES (?, ?, ?)'
+    ).bind(id, childId, new Date().toISOString()).run();
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Achievement claimed successfully' 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Rewards endpoints
+router.get('/api/rewards', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const rewards = await env.DB.prepare(
+      'SELECT * FROM rewards ORDER BY points_required'
+    ).all();
+
+    return new Response(JSON.stringify(rewards.results), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+router.post('/api/rewards/:id/claim', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { id } = request.params;
+    const { childId } = await request.json();
+
+    // Verify child belongs to user
+    const child = await env.DB.prepare(
+      'SELECT * FROM children WHERE id = ? AND user_id = ?'
+    ).bind(childId, user.id).first();
+
+    if (!child) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Child not found or access denied' 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Get child's points and reward details
+    const [childPoints, reward] = await Promise.all([
+      env.DB.prepare(
+        'SELECT points FROM children WHERE id = ?'
+      ).bind(childId).first(),
+      env.DB.prepare(
+        'SELECT * FROM rewards WHERE id = ?'
+      ).bind(id).first()
+    ]);
+
+    if (!reward) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Reward not found' 
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    if (childPoints.points < reward.points_required) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Not enough points' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Deduct points and record reward claim
+    await env.DB.prepare(
+      'UPDATE children SET points = points - ? WHERE id = ?'
+    ).bind(reward.points_required, childId).run();
+
+    await env.DB.prepare(
+      'INSERT INTO reward_claims (reward_id, child_id, claimed_at) VALUES (?, ?, ?)'
+    ).bind(id, childId, new Date().toISOString()).run();
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Reward claimed successfully' 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Progress endpoints
+router.get('/api/progress', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { childId } = request.query;
+
+    // Get child's progress statistics
+    const [totalChallenges, completedChallenges, achievements, rewards] = await Promise.all([
+      env.DB.prepare('SELECT COUNT(*) as total FROM challenges').first(),
+      env.DB.prepare(
+        'SELECT COUNT(*) as completed FROM challenge_completions WHERE child_id = ?'
+      ).bind(childId).first(),
+      env.DB.prepare(
+        'SELECT COUNT(*) as total FROM achievements'
+      ).first(),
+      env.DB.prepare(
+        'SELECT COUNT(*) as claimed FROM reward_claims WHERE child_id = ?'
+      ).bind(childId).first()
+    ]);
+
+    // Get weekly progress
+    const weeklyProgress = await env.DB.prepare(`
+      SELECT 
+        date(completed_at) as date,
+        COUNT(*) as completed
+      FROM challenge_completions
+      WHERE child_id = ?
+      AND completed_at >= date('now', '-7 days')
+      GROUP BY date(completed_at)
+      ORDER BY date
+    `).bind(childId).all();
+
+    return new Response(JSON.stringify({
+      totalChallenges: totalChallenges.total,
+      completedChallenges: completedChallenges.completed,
+      totalAchievements: achievements.total,
+      claimedRewards: rewards.claimed,
+      weeklyProgress: weeklyProgress.results
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
 // Export default function to handle requests
 export default {
   async fetch(request, env, ctx) {
