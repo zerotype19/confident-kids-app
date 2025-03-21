@@ -992,7 +992,7 @@ async function checkAndUpdateAchievements(userId, childId, env) {
   }
 }
 
-// Modified export default to fix response format for the frontend
+// Export default function to handle requests
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -1000,6 +1000,14 @@ export default {
     const method = request.method;
     
     console.log(`Received ${method} request for path: ${path}`);
+    
+    // Handle OPTIONS requests directly
+    if (method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders
+      });
+    }
     
     // Direct handling for the problematic endpoint
     if (path === '/api/children' && method === 'POST') {
