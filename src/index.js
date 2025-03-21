@@ -568,3 +568,220 @@ export default {
     return router.handle(request, env, ctx);
   }
 };
+// Get Progress Data Endpoint
+router.get('/api/progress/:childId', async (request, env) => {
+  try {
+    const { childId } = request.params;
+    
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: corsHeaders
+      });
+    }
+    
+    // Verify child belongs to user
+    const child = await env.DB.prepare(`
+      SELECT * FROM children WHERE id = ? AND user_id = ?
+    `).bind(childId, user.id).first();
+    
+    if (!child) {
+      return new Response(JSON.stringify({ message: 'Child not found' }), {
+        status: 404,
+        headers: corsHeaders
+      });
+    }
+    
+    // Get progress data from D1 database
+    const pillars = await env.DB.prepare(`
+      SELECT p.id, p.name, 
+        (SELECT COUNT(*) FROM content c JOIN progress pr ON c.id = pr.technique_id 
+         WHERE c.pillar_id = p.id AND pr.child_id = ? AND pr.completed = 1) as completed_techniques,
+        (SELECT COUNT(*) FROM content c WHERE c.pillar_id = p.id) as total_techniques
+      FROM pillars p
+    `).bind(childId).all();
+    
+    // Calculate overall progress
+    const totalTechniques = pillars.results.reduce((sum, pillar) => sum + pillar.total_techniques, 0);
+    const completedTechniques = pillars.results.reduce((sum, pillar) => sum + pillar.completed_techniques, 0);
+    const overallProgress = totalTechniques > 0 
+      ? Math.round((completedTechniques / totalTechniques) * 100) 
+      : 0;
+    
+    return new Response(JSON.stringify({
+      progress: {
+        overallProgress,
+        techniquesCompleted: completedTechniques,
+        totalTechniques,
+        pillars: pillars.results.map(pillar => ({
+          ...pillar,
+          progress: pillar.total_techniques > 0 
+            ? Math.round((pillar.completed_techniques / pillar.total_techniques) * 100) 
+            : 0
+        }))
+      }
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ message: error.message }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+});
+
+// Update Progress Endpoint
+router.post('/api/progress/update', async (request, env) => {
+  try {
+    const { childId, techniqueId, pillarId, completed } = await request.json();
+    
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: corsHeaders
+      });
+    }
+    
+    // Verify child belongs to user
+    const child = await env.DB.prepare(`
+      SELECT * FROM children WHERE id = ? AND user_id = ?
+    `).bind(childId, user.id).first();
+    
+    if (!child) {
+      return new Response(JSON.stringify({ message: 'Child not found' }), {
+        status: 404,
+        headers: corsHeaders
+      });
+    }
+    
+    // Check if progress record exists
+    const existingProgress = await env.DB.prepare(`
+      SELECT * FROM progress WHERE child_id = ? AND technique_id = ?
+    `).bind(childId, techniqueId).first();
+    
+    if (existingProgress) {
+      // Update existing record
+      await env.DB.prepare(`
+        UPDATE progress 
+        SET completed = ?, completed_at = ?
+        WHERE child_id = ? AND technique_id = ?
+      `).bind(
+        completed ? 1 : 0,
+        completed ? Date.now() : null,
+        childId,
+        techniqueId
+      ).run();
+    } else {
+      // Create new record with a unique ID
+      const progressId = crypto.randomUUID();
+      await env.DB.prepare(`
+        INSERT INTO progress (id, user_id, child_id, pillar_id, technique_id, completed, completed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        progressId,
+        user.id,
+        childId,
+        pillarId,
+        techniqueId,
+        completed ? 1 : 0,
+        completed ? Date.now() : null
+      ).run();
+    }
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Progress updated successfully'
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ message: error.message }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+});
+async function checkAndUpdateAchievements(userId, childId, env) {
+  try {
+    // Get completed techniques count
+    const completedTechniques = await env.DB.prepare(`
+      SELECT COUNT(*) as count
+      FROM progress
+      WHERE child_id = ? AND completed = 1
+    `).bind(childId).first();
+    
+    // Check for achievements based on completed techniques
+    const achievements = await env.DB.prepare(`
+      SELECT * FROM achievements
+      WHERE criteria_type = 'techniques_completed' AND criteria_value <= ?
+    `).bind(completedTechniques.count).all();
+    
+    // Update user achievements
+    for (const achievement of achievements.results) {
+      const existingAchievement = await env.DB.prepare(`
+        SELECT * FROM user_achievements
+        WHERE user_id = ? AND achievement_id = ?
+      `).bind(userId, achievement.id).first();
+      
+      if (!existingAchievement) {
+        // Generate a unique ID for the achievement
+        const achievementId = crypto.randomUUID();
+        
+        // Award new achievement
+        await env.DB.prepare(`
+          INSERT INTO user_achievements (id, user_id, achievement_id, progress, unlocked_at, created_at)
+          VALUES (?, ?, ?, 100, ?, ?)
+        `).bind(
+          achievementId,
+          userId, 
+          achievement.id, 
+          Date.now(),
+          Date.now()
+        ).run();
+        
+        // Award points for achievement
+        await env.DB.prepare(`
+          UPDATE users SET points = points + ? WHERE id = ?
+        `).bind(achievement.points_value, userId).run();
+        
+        // Create certificate if applicable
+        if (achievement.creates_certificate) {
+          const certificateId = crypto.randomUUID();
+          await env.DB.prepare(`
+            INSERT INTO certificates (id, child_id, title, description, date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).bind(
+            certificateId,
+            childId,
+            achievement.name + ' Certificate',
+            'Awarded for ' + achievement.description,
+            Date.now(),
+            Date.now()
+          ).run();
+        }
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking achievements:', error);
+    return false;
+  }
+}
