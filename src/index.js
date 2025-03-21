@@ -842,6 +842,76 @@ router.get('/api/progress/:childId', async (request, env) => {
   }
 });
 
+// Get specific pillar by ID
+router.get('/api/pillars/:id', async (request, env) => {
+  try {
+    const id = parseInt(request.params.id);
+    
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: corsHeaders
+      });
+    }
+    
+    // Get pillar from database
+    const pillar = await env.DB.prepare(`
+      SELECT p.id, p.name, p.short_description,
+        (SELECT COUNT(*) FROM progress pr 
+         WHERE pr.pillar_id = p.id AND pr.user_id = ? AND pr.completed = 1) as activitiesCompleted,
+        (SELECT COUNT(*) FROM content c WHERE c.pillar_id = p.id) as totalActivities
+      FROM pillars p
+      WHERE p.id = ?
+    `).bind(user.id, id).first();
+    
+    if (!pillar) {
+      return new Response(JSON.stringify({ message: 'Pillar not found' }), {
+        status: 404,
+        headers: corsHeaders
+      });
+    }
+    
+    // Calculate progress
+    const progress = pillar.totalActivities > 0 
+      ? Math.round((pillar.activitiesCompleted / pillar.totalActivities) * 100) 
+      : 0;
+    
+    // Get techniques for this pillar
+    const techniques = await env.DB.prepare(`
+      SELECT id, title, description
+      FROM content
+      WHERE pillar_id = ?
+    `).bind(id).all();
+    
+    // Format response
+    const response = {
+      id: pillar.id,
+      name: pillar.name,
+      shortDescription: pillar.short_description,
+      progress: progress,
+      activitiesCompleted: pillar.activitiesCompleted,
+      totalActivities: pillar.totalActivities,
+      techniques: techniques.results || []
+    };
+    
+    return new Response(JSON.stringify(response), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ message: error.message }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+});
 
 
 
