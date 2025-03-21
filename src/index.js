@@ -211,6 +211,39 @@ router.get('/api/db-test', async (request, env) => {
   }
 });
 
+// Authentication helper function - add this before your endpoints
+async function verifyAuth(request, env) {
+  // Get the token from the Authorization header
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  // Extract the token
+  const token = authHeader.split(' ')[1];
+  
+  // Decode the token (it's base64 encoded)
+  try {
+    const userData = JSON.parse(atob(token));
+    
+    // Get user from database
+    const user = await env.DB.prepare(
+      'SELECT id, name, email, created_at FROM users WHERE id = ?'
+    ).bind(userData.id).first();
+    
+    if (!user) {
+      return null;
+    }
+    
+    return user;
+  } catch (error) {
+    console.error('Auth error:', error);
+    return null;
+  }
+}
+
+
+
 // User registration endpoint
 router.post('/api/users/register', async (request, env) => {
   try {
@@ -562,12 +595,7 @@ router.get('/api/challenges/daily', async (request, env) => {
   }
 });
 
-// Export default function to handle requests
-export default {
-  async fetch(request, env, ctx) {
-    return router.handle(request, env, ctx);
-  }
-};
+
 // Get Progress Data Endpoint
 router.get('/api/progress/:childId', async (request, env) => {
   try {
@@ -841,3 +869,10 @@ async function checkAndUpdateAchievements(userId, childId, env) {
     return false;
   }
 }
+
+// Export default function to handle requests
+export default {
+  async fetch(request, env, ctx) {
+    return router.handle(request, env, ctx);
+  }
+};
