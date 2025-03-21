@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
+// Remove Footer import since it doesn't exist
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -13,7 +13,11 @@ import ProgressTracker from './pages/ProgressTracker';
 import Challenges from './pages/Challenges';
 import NotFound from './pages/NotFound';
 import PrivateRoute from './components/routing/PrivateRoute';
+// Add new component imports
+import Subscription from './components/Subscription';
+import Rewards from './components/Rewards';
 import './index.css';
+import './styles/main.css'; // Add the new stylesheet if you've created it
 
 function App() {
   return (
@@ -31,10 +35,13 @@ function App() {
               <PrivateRoute exact path="/pillar/:id" component={PillarView} />
               <PrivateRoute exact path="/progress" component={ProgressTracker} />
               <PrivateRoute exact path="/challenges" component={Challenges} />
+              {/* Add new routes */}
+              <PrivateRoute exact path="/subscription" component={Subscription} />
+              <PrivateRoute exact path="/rewards" component={Rewards} />
               <Route component={NotFound} />
             </Switch>
           </main>
-          <Footer />
+          {/* Remove Footer component */}
         </div>
       </Router>
     </AuthProvider>
