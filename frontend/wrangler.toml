@@ -8,4 +8,7 @@ entry-point = "workers-site"
 
 [build]
 command = "npm run build"
-output_dir = "build" 
+output_dir = "build"
+
+[pages]
+pages_build_output_dir = "build" 
