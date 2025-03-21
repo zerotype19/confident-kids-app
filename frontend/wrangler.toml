@@ -4,11 +4,9 @@ compatibility_date = "2023-01-01"
 
 [site]
 bucket = "./build"
-entry-point = "workers-site"
 
 [build]
 command = "npm run build"
-output_dir = "build"
 
 [pages]
 pages_build_output_dir = "build" 
