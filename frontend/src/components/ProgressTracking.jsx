@@ -1,46 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FaChartLine, FaTrophy, FaCalendarAlt, FaChild } from 'react-icons/fa';
+import { FaChartLine, FaTrophy, FaCalendarAlt, FaChild, FaStar } from 'react-icons/fa';
 
-const ProgressTracking = ({ childId }) => {
-  const [progressData, setProgressData] = useState(null);
+const ProgressTracking = ({ childId, pillarId }) => {
+  const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { currentUser, hasPremiumAccess } = useAuth();
   const isPremium = hasPremiumAccess();
 
   useEffect(() => {
-    const fetchProgressData = async () => {
-      if (!childId) return;
-      
+    const fetchProgress = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('authToken');
         
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/progress/${childId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        // Fetch progress statistics
+        const statsResponse = await fetch(
+          `${process.env.REACT_APP_API_URL}/api/progress/stats/child/${childId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch progress data');
+        if (!statsResponse.ok) {
+          throw new Error('Failed to fetch progress statistics');
         }
 
-        setProgressData(data.progress);
+        const statsData = await statsResponse.json();
+
+        // If pillarId is provided, fetch specific pillar progress
+        if (pillarId) {
+          const pillarResponse = await fetch(
+            `${process.env.REACT_APP_API_URL}/api/progress/pillar/${pillarId}/child/${childId}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (!pillarResponse.ok) {
+            throw new Error('Failed to fetch pillar progress');
+          }
+
+          const pillarData = await pillarResponse.json();
+          setProgress({
+            ...statsData,
+            pillarProgress: pillarData,
+          });
+        } else {
+          setProgress(statsData);
+        }
       } catch (error) {
-        console.error('Error fetching progress data:', error);
-        setError('Failed to load progress data. Please try again later.');
+        console.error('Error fetching progress:', error);
+        setError('Failed to load progress data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProgressData();
-  }, [childId]);
+    fetchProgress();
+  }, [childId, pillarId]);
 
   const updateProgress = async (pillarId, activityId, completed) => {
     if (!childId) return;
@@ -69,7 +92,7 @@ const ProgressTracking = ({ childId }) => {
       }
 
       // Update local state with new progress data
-      setProgressData(prevData => {
+      setProgress(prevData => {
         const updatedPillars = prevData.pillars.map(pillar => {
           if (pillar.id === pillarId) {
             const updatedActivities = pillar.activities.map(activity => {
@@ -95,144 +118,86 @@ const ProgressTracking = ({ childId }) => {
   };
 
   if (loading) {
-    return <div className="text-center p-5">Loading progress data...</div>;
+    return <div className="progress-loading">Loading progress...</div>;
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return <div className="progress-error">{error}</div>;
   }
 
-  if (!progressData) {
-    return <div className="text-center p-5">No progress data available.</div>;
+  if (!progress) {
+    return null;
   }
 
   return (
-    <div className="progress-tracking-container">
-      <div className="dashboard-stats">
-        <div className="stat-card">
-          <FaChartLine className="mb-2" size={24} />
-          <div className="stat-value">{progressData.overallProgress}%</div>
-          <div className="stat-label">Overall Progress</div>
+    <div className="progress-tracking">
+      <div className="progress-summary">
+        <div className="progress-stat">
+          <FaTrophy className="icon" />
+          <div className="stat-content">
+            <span className="stat-value">{progress.totalCompleted}</span>
+            <span className="stat-label">Challenges Completed</span>
+          </div>
         </div>
         
-        <div className="stat-card">
-          <FaTrophy className="mb-2" size={24} />
-          <div className="stat-value">{progressData.activitiesCompleted}</div>
-          <div className="stat-label">Activities Completed</div>
-        </div>
-        
-        <div className="stat-card">
-          <FaCalendarAlt className="mb-2" size={24} />
-          <div className="stat-value">{progressData.currentStreak}</div>
-          <div className="stat-label">Day Streak</div>
+        <div className="progress-stat">
+          <FaStar className="icon" />
+          <div className="stat-content">
+            <span className="stat-value">{progress.averageRating.toFixed(1)}</span>
+            <span className="stat-label">Average Rating</span>
+          </div>
         </div>
       </div>
-      
-      <h3 className="mb-3">Progress by Pillar</h3>
-      
-      {progressData.pillars.map((pillar) => (
-        <div key={pillar.id} className="mb-4">
-          <div className="progress-label">
-            <span>{pillar.name}</span>
-            <span>{pillar.progress}%</span>
-          </div>
-          <div className="progress-container">
-            <div 
-              className={`progress-bar progress-bar-${pillar.id}`} 
-              style={{ width: `${pillar.progress}%` }}
-            ></div>
-          </div>
-          
-          {isPremium ? (
-            <div className="activities-list mt-3">
-              <h5>Activities</h5>
-              {pillar.activities.map((activity) => (
-                <div key={activity.id} className="activity-item d-flex align-items-center justify-content-between p-2">
-                  <div>
-                    <input
-                      type="checkbox"
-                      id={`activity-${activity.id}`}
-                      checked={activity.completed}
-                      onChange={(e) => updateProgress(pillar.id, activity.id, e.target.checked)}
-                      className="me-2"
-                    />
-                    <label htmlFor={`activity-${activity.id}`}>{activity.name}</label>
+
+      {pillarId && progress.pillarProgress && (
+        <div className="pillar-progress">
+          <h3>Recent Challenges</h3>
+          <div className="recent-challenges">
+            {progress.pillarProgress.slice(0, 3).map((entry) => (
+              <div key={entry.id} className="recent-challenge">
+                <div className="challenge-info">
+                  <h4>{entry.activity.title}</h4>
+                  <div className="challenge-meta">
+                    <span className="rating">
+                      <FaStar /> {entry.rating}
+                    </span>
+                    <span className="date">
+                      {new Date(entry.completedAt).toLocaleDateString()}
+                    </span>
                   </div>
-                  <span className="text-muted">{activity.date}</span>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="premium-feature-container mt-3">
-              <div className="premium-feature-preview">
-                <div className="activities-list">
-                  <h5>Activities</h5>
-                  {pillar.activities.slice(0, 1).map((activity) => (
-                    <div key={activity.id} className="activity-item d-flex align-items-center justify-content-between p-2">
-                      <div>
-                        <input
-                          type="checkbox"
-                          id={`activity-${activity.id}`}
-                          checked={activity.completed}
-                          onChange={(e) => updateProgress(pillar.id, activity.id, e.target.checked)}
-                          className="me-2"
-                        />
-                        <label htmlFor={`activity-${activity.id}`}>{activity.name}</label>
-                      </div>
-                      <span className="text-muted">{activity.date}</span>
-                    </div>
-                  ))}
-                  {Array(3).fill(0).map((_, i) => (
-                    <div key={i} className="activity-item d-flex align-items-center justify-content-between p-2">
-                      <div>
-                        <span className="me-2">□</span>
-                        <span>Premium Activity {i + 1}</span>
-                      </div>
-                      <span className="text-muted">Locked</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="premium-feature-overlay">
-                <div className="lock-icon">🔒</div>
-                <h4>Premium Feature</h4>
-                <p>Unlock detailed activity tracking with a premium subscription</p>
-                <a href="/subscription" className="btn btn-secondary mt-2">Upgrade Now</a>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-      
-      {isPremium && (
-        <div className="calendar-section mt-5">
-          <h3 className="mb-3">Activity Calendar</h3>
-          <div className="calendar-container">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="calendar-header">{day}</div>
-            ))}
-            
-            {progressData.calendar.map((day) => (
-              <div 
-                key={day.date} 
-                className={`calendar-day ${day.completed ? 'completed' : ''} ${day.isToday ? 'today' : ''} ${day.isFuture ? 'future' : ''}`}
-                title={day.activities.join(', ')}
-              >
-                <div>{new Date(day.date).getDate()}</div>
-                {day.completed && <div className="calendar-badge">✓</div>}
+                {entry.notes && (
+                  <p className="challenge-notes">{entry.notes}</p>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
-      
-      {!isPremium && (
-        <div className="upgrade-prompt standard mt-5">
-          <h3><FaChild className="me-2" /> Unlock Advanced Progress Tracking</h3>
-          <p>Subscribe to our premium plan to access detailed progress tracking, activity calendars, and achievement certificates for your child.</p>
-          <a href="/subscription" className="upgrade-button">Upgrade Now</a>
+
+      <div className="progress-by-pillar">
+        <h3>Progress by Pillar</h3>
+        <div className="pillars-grid">
+          {progress.progressByPillar.map((pillarProgress) => (
+            <div key={pillarProgress.pillarId} className="pillar-progress-card">
+              <div className="pillar-header">
+                <h4>{pillarProgress.pillar.name}</h4>
+                <span className="pillar-icon">{pillarProgress.pillar.icon}</span>
+              </div>
+              <div className="pillar-stats">
+                <div className="stat">
+                  <FaChartLine className="icon" />
+                  <span>{pillarProgress._count.id} completed</span>
+                </div>
+                <div className="stat">
+                  <FaStar className="icon" />
+                  <span>{pillarProgress._avg.rating.toFixed(1)} avg rating</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -1,0 +1,156 @@
+.progress-tracking {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-summary {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.progress-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex: 1;
+}
+
+.progress-stat .icon {
+  font-size: 2rem;
+  color: #007bff;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.pillar-progress {
+  margin-bottom: 2rem;
+}
+
+.pillar-progress h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.recent-challenges {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recent-challenge {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.challenge-info h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.challenge-meta {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.challenge-notes {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e9ecef;
+  color: #495057;
+  font-size: 0.875rem;
+}
+
+.progress-by-pillar {
+  margin-top: 2rem;
+}
+
+.progress-by-pillar h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.pillar-progress-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.pillar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.pillar-header h4 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.pillar-icon {
+  font-size: 1.5rem;
+  color: #007bff;
+}
+
+.pillar-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pillar-stats .stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.pillar-stats .icon {
+  color: #007bff;
+}
+
+.progress-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.progress-error {
+  color: #dc3545;
+  padding: 1rem;
+  background: #f8d7da;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+} 
