@@ -501,6 +501,77 @@ router.get('/api/dashboard', async (request, env) => {
 });
 
 
+// Add child endpoint (alternative path)
+router.post('/api/children', async (request, env) => {
+  // This is a redirect to the existing /api/users/child endpoint
+  try {
+    // Get the token from the Authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Extract the token
+    const token = authHeader.split(' ')[1];
+    
+    // Decode the token
+    let userData;
+    try {
+      userData = JSON.parse(atob(token));
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Parse the request body
+    const data = await request.json();
+    
+    // Validate required fields
+    if (!data.name || !data.age || !data.ageGroup) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Generate a child ID
+    const childId = crypto.randomUUID();
+    
+    // Insert the child
+    await env.DB.prepare(
+      'INSERT INTO children (id, user_id, name, age, age_group, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(childId, userData.id, data.name, data.age, data.ageGroup, Date.now()).run();
+    
+    // Get updated user profile with children
+    const user = await env.DB.prepare(
+      'SELECT id, name, email, created_at FROM users WHERE id = ?'
+    ).bind(userData.id).first();
+    
+    const children = await env.DB.prepare(
+      'SELECT id, name, age, age_group FROM children WHERE user_id = ?'
+    ).bind(userData.id).all();
+    
+    user.children = children.results || [];
+    
+    return new Response(JSON.stringify(user), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+
+
 
 // Add child to user profile
 router.post('/api/users/child', async (request, env) => {
