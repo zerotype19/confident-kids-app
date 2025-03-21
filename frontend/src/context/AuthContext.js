@@ -11,6 +11,25 @@ export const AuthProvider = ({ children })  => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+    
+    
+    
+// Add this to your AuthContext.js
+const hasPremiumAccess = () => {
+  return currentUser && currentUser.subscription && currentUser.subscription.status === 'active';
+};
+
+// Include it in the context value
+const value = {
+  currentUser,
+  loading,
+  register,
+  login,
+  logout,
+  updateProfile,
+  hasPremiumAccess // Add this
+};
+
   // Load user on initial render
 useEffect(() => {
   const loadUser = async () => {
