@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext'; // Add useAuth import
 import './styles/main.css';
 
 // Components
@@ -89,10 +89,7 @@ const App = () => {
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-
 export default App;
+
+// Move the ReactDOM.render to a separate index.js file
+// This should not be in App.js
