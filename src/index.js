@@ -398,6 +398,62 @@ router.get('/api/users/profile', async (request, env) => {
   }
 });
 
+
+// Add this to your Cloudflare Worker
+router.get('/api/dashboard', async (request, env) => {
+  try {
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: corsHeaders
+      });
+    }
+    
+    // Get pillars data
+    const pillars = await env.DB.prepare(`
+      SELECT * FROM pillars
+    `).all();
+    
+    // Get children data for this user
+    const children = await env.DB.prepare(`
+      SELECT * FROM children WHERE user_id = ?
+    `).bind(user.id).all();
+    
+    // Get recent activities
+    const recentActivities = await env.DB.prepare(`
+      SELECT p.*, c.name as child_name, t.title as technique_title
+      FROM progress p
+      JOIN children c ON p.child_id = c.id
+      JOIN content t ON p.technique_id = t.id
+      WHERE p.user_id = ?
+      ORDER BY p.completed_at DESC
+      LIMIT 5
+    `).bind(user.id).all();
+    
+    return new Response(JSON.stringify({
+      pillars: pillars.results || [],
+      children: children.results || [],
+      recentActivities: recentActivities.results || []
+    }), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ message: error.message }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  }
+});
+
+
 // Add child to user profile
 router.post('/api/users/child', async (request, env) => {
   try {
@@ -668,59 +724,6 @@ router.get('/api/progress/:childId', async (request, env) => {
 });
 
 
-// Add this to your Cloudflare Worker
-router.get('/api/dashboard', async (request, env) => {
-  try {
-    // Verify JWT token and get user
-    const user = await verifyAuth(request, env);
-    if (!user) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
-        status: 401,
-        headers: corsHeaders
-      });
-    }
-    
-    // Get pillars data
-    const pillars = await env.DB.prepare(`
-      SELECT * FROM pillars
-    `).all();
-    
-    // Get children data for this user
-    const children = await env.DB.prepare(`
-      SELECT * FROM children WHERE user_id = ?
-    `).bind(user.id).all();
-    
-    // Get recent activities
-    const recentActivities = await env.DB.prepare(`
-      SELECT p.*, c.name as child_name, t.title as technique_title
-      FROM progress p
-      JOIN children c ON p.child_id = c.id
-      JOIN content t ON p.technique_id = t.id
-      WHERE p.user_id = ?
-      ORDER BY p.completed_at DESC
-      LIMIT 5
-    `).bind(user.id).all();
-    
-    return new Response(JSON.stringify({
-      pillars: pillars.results || [],
-      children: children.results || [],
-      recentActivities: recentActivities.results || []
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ message: error.message }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
-    });
-  }
-});
 
 
 // Update Progress Endpoint
