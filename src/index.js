@@ -1115,28 +1115,102 @@ router.get('/api/pillars/:id/challenges', async (request, env) => {
       ORDER BY c.id
     `).bind(user.id, id).all();
 
-    // If no challenges found in database, return default challenges
+    // If no challenges found in database, return default challenges based on pillar
     if (!challenges.results || challenges.results.length === 0) {
-      const defaultChallenges = [
-        {
-          id: 'default-challenge-1',
-          title: 'Daily Confidence Challenge',
-          description: 'Ask your child about something they feel confident doing today and encourage them to teach you about it.',
-          pillar_id: id,
-          completed: 0,
-          completed_at: null
-        },
-        {
-          id: 'default-challenge-2',
-          title: 'Growth Mindset Exercise',
-          description: 'Help your child identify a skill they want to improve and create a simple plan to practice it.',
-          pillar_id: id,
-          completed: 0,
-          completed_at: null
-        }
-      ];
+      const defaultChallenges = {
+        '1': [ // Independence & Problem-Solving
+          {
+            id: 'indep-1',
+            title: 'The "Ask, Don\'t Tell" Challenge',
+            description: 'When your child has a problem, resist the urge to jump in. Ask "What do you think you should do?" and let them think through solutions.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          },
+          {
+            id: 'indep-2',
+            title: 'Morning Independence',
+            description: 'Let your child choose their own clothes for the day. Ask them to check the weather and decide if they need a jacket.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          }
+        ],
+        '2': [ // Growth Mindset & Resilience
+          {
+            id: 'growth-1',
+            title: 'The "Yet" Challenge',
+            description: 'When your child says "I can\'t do this," add "yet" to their statement. Help them see it as a work in progress.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          },
+          {
+            id: 'growth-2',
+            title: 'Learning from Mistakes',
+            description: 'Share a story about a time you made a mistake and what you learned from it. Then ask your child about a mistake they learned from.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          }
+        ],
+        '3': [ // Social Confidence & Communication
+          {
+            id: 'social-1',
+            title: 'Conversation Starter',
+            description: 'Practice three conversation starters with your child: "What do you think about ___?" "That\'s cool—how did you get into it?" "What was the best part of your day?"',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          },
+          {
+            id: 'social-2',
+            title: 'Group Activity Challenge',
+            description: 'Encourage your child to join a group activity at school or in the neighborhood. Help them practice asking "Can I join?"',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          }
+        ],
+        '4': [ // Purpose & Strength Discovery
+          {
+            id: 'purpose-1',
+            title: 'Strength Journal',
+            description: 'Help your child list five things they enjoy doing. Ask them what they like about each activity.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          },
+          {
+            id: 'purpose-2',
+            title: 'Talent Exploration',
+            description: 'Try a new activity together that your child is interested in. Focus on the fun of learning rather than being "good" at it.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          }
+        ],
+        '5': [ // Managing Fear & Anxiety
+          {
+            id: 'fear-1',
+            title: 'Fear Reframing',
+            description: 'When your child expresses fear, ask "What if this goes great? What would that look like?" Help them imagine positive outcomes.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          },
+          {
+            id: 'fear-2',
+            title: 'Small Steps Challenge',
+            description: 'Break down a fear into tiny steps. Help your child take one small step today toward something they\'re afraid of.',
+            pillar_id: id,
+            completed: 0,
+            completed_at: null
+          }
+        ]
+      };
 
-      return new Response(JSON.stringify(defaultChallenges), {
+      return new Response(JSON.stringify(defaultChallenges[id] || []), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
