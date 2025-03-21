@@ -10,39 +10,35 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import PillarDetail from './components/PillarDetail';
+import PillarsOverview from './components/PillarsOverview';
 import Subscription from './components/Subscription';
 import Rewards from './components/Rewards';
 import Home from './components/Home';
 import Profile from './components/Profile';
+import Challenges from './pages/Challenges';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
-  const { currentUser, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
+  const { currentUser } = useAuth();
   if (!currentUser) {
     return <Navigate to="/login" />;
   }
-  
   return children;
 };
 
 // Premium route component
 const PremiumRoute = ({ children }) => {
-  const { hasPremiumAccess, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
+  const { hasPremiumAccess } = useAuth();
   if (!hasPremiumAccess()) {
     return <Navigate to="/subscription" />;
   }
-  
   return children;
+};
+
+// Root redirect component
+const RootRedirect = () => {
+  const { currentUser } = useAuth();
+  return <Navigate to={currentUser ? "/dashboard" : "/"} />;
 };
 
 const App = () => {
@@ -59,9 +55,19 @@ const App = () => {
                 <Dashboard />
               </ProtectedRoute>
             } />
+            <Route path="/pillars" element={
+              <ProtectedRoute>
+                <PillarsOverview />
+              </ProtectedRoute>
+            } />
             <Route path="/pillars/:pillarId" element={
               <ProtectedRoute>
                 <PillarDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/challenges" element={
+              <ProtectedRoute>
+                <Challenges />
               </ProtectedRoute>
             } />
             <Route path="/subscription" element={
@@ -81,7 +87,7 @@ const App = () => {
                 <Profile />
               </ProtectedRoute>
             } />
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<RootRedirect />} />
           </Routes>
         </main>
       </BrowserRouter>

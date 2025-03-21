@@ -1085,141 +1085,66 @@ router.get('/api/pillars', async (request, env) => {
 });
 
 // Get challenges for a specific pillar
-router.get('/api/pillars/:id/challenges', async (request, env) => {
+router.get('/api/pillars/:pillarId/challenges', async (request, env) => {
   try {
-    // Verify JWT token and get user
-    const user = await verifyAuth(request, env);
-    if (!user) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: 'Unauthorized' 
-      }), {
+    // Verify user is authenticated
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const { id } = request.params;
-    
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    // Get pillarId from URL parameters
+    const url = new URL(request.url);
+    const pillarId = url.pathname.split('/').pop();
+
+    // Get childId from URL search params
+    const childId = url.searchParams.get('childId');
+    if (!childId) {
+      return new Response(JSON.stringify({ success: false, error: 'Child ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verify child belongs to user
+    const childResult = await env.DB.prepare(`
+      SELECT * FROM children 
+      WHERE id = ? AND user_id = ?
+    `).bind(childId, userId).first();
+
+    if (!childResult) {
+      return new Response(JSON.stringify({ success: false, error: 'Child not found or unauthorized' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get challenges for the pillar
     const challenges = await env.DB.prepare(`
       SELECT c.*, 
-             CASE WHEN cc.child_id IS NOT NULL THEN 1 ELSE 0 END as completed,
+             CASE WHEN cc.id IS NOT NULL THEN 1 ELSE 0 END as completed,
              cc.completed_at
       FROM challenges c
       LEFT JOIN challenge_completions cc ON c.id = cc.challenge_id 
-        AND cc.child_id = (
-          SELECT id FROM children WHERE user_id = ? LIMIT 1
-        )
+        AND cc.child_id = ?
       WHERE c.pillar_id = ?
-      ORDER BY c.id
-    `).bind(user.id, id).all();
+      ORDER BY c.difficulty_level, c.id
+    `).bind(childId, pillarId).all();
 
-    // If no challenges found in database, return default challenges based on pillar
-    if (!challenges.results || challenges.results.length === 0) {
-      const defaultChallenges = {
-        '1': [ // Independence & Problem-Solving
-          {
-            id: 'indep-1',
-            title: 'The "Ask, Don\'t Tell" Challenge',
-            description: 'When your child has a problem, resist the urge to jump in. Ask "What do you think you should do?" and let them think through solutions.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          },
-          {
-            id: 'indep-2',
-            title: 'Morning Independence',
-            description: 'Let your child choose their own clothes for the day. Ask them to check the weather and decide if they need a jacket.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          }
-        ],
-        '2': [ // Growth Mindset & Resilience
-          {
-            id: 'growth-1',
-            title: 'The "Yet" Challenge',
-            description: 'When your child says "I can\'t do this," add "yet" to their statement. Help them see it as a work in progress.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          },
-          {
-            id: 'growth-2',
-            title: 'Learning from Mistakes',
-            description: 'Share a story about a time you made a mistake and what you learned from it. Then ask your child about a mistake they learned from.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          }
-        ],
-        '3': [ // Social Confidence & Communication
-          {
-            id: 'social-1',
-            title: 'Conversation Starter',
-            description: 'Practice three conversation starters with your child: "What do you think about ___?" "That\'s cool—how did you get into it?" "What was the best part of your day?"',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          },
-          {
-            id: 'social-2',
-            title: 'Group Activity Challenge',
-            description: 'Encourage your child to join a group activity at school or in the neighborhood. Help them practice asking "Can I join?"',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          }
-        ],
-        '4': [ // Purpose & Strength Discovery
-          {
-            id: 'purpose-1',
-            title: 'Strength Journal',
-            description: 'Help your child list five things they enjoy doing. Ask them what they like about each activity.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          },
-          {
-            id: 'purpose-2',
-            title: 'Talent Exploration',
-            description: 'Try a new activity together that your child is interested in. Focus on the fun of learning rather than being "good" at it.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          }
-        ],
-        '5': [ // Managing Fear & Anxiety
-          {
-            id: 'fear-1',
-            title: 'Fear Reframing',
-            description: 'When your child expresses fear, ask "What if this goes great? What would that look like?" Help them imagine positive outcomes.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          },
-          {
-            id: 'fear-2',
-            title: 'Small Steps Challenge',
-            description: 'Break down a fear into tiny steps. Help your child take one small step today toward something they\'re afraid of.',
-            pillar_id: id,
-            completed: 0,
-            completed_at: null
-          }
-        ]
-      };
-
-      return new Response(JSON.stringify(defaultChallenges[id] || []), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    }
-    
-    return new Response(JSON.stringify(challenges.results), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    return new Response(JSON.stringify({ 
+      success: true, 
+      challenges: challenges.results 
+    }), {
+      headers: { 'Content-Type': 'application/json' }
     });
+
   } catch (error) {
     console.error('Error fetching pillar challenges:', error);
     return new Response(JSON.stringify({ 
@@ -1227,7 +1152,7 @@ router.get('/api/pillars/:id/challenges', async (request, env) => {
       error: error.message 
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 });
@@ -1646,6 +1571,310 @@ router.get('/api/progress', async (request, env) => {
       totalAchievements: achievements.total,
       claimedRewards: rewards.claimed,
       weeklyProgress: weeklyProgress.results
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Get progress stats for a specific child
+router.get('/api/progress/stats/child/:childId', async (request, env) => {
+  try {
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { childId } = request.params;
+    
+    // Get total completed challenges
+    const stats = await env.DB.prepare(`
+      SELECT 
+        COUNT(*) as total_completed
+      FROM challenge_completions
+      WHERE child_id = ?
+    `).bind(childId).first();
+
+    // Get completion rates by pillar
+    const pillarStats = await env.DB.prepare(`
+      SELECT 
+        p.id as pillar_id,
+        p.name as pillar_name,
+        COUNT(cc.id) as completed_challenges,
+        (SELECT COUNT(*) FROM challenges WHERE pillar_id = p.id) as total_challenges
+      FROM pillars p
+      LEFT JOIN challenges c ON c.pillar_id = p.id
+      LEFT JOIN challenge_completions cc ON cc.challenge_id = c.id AND cc.child_id = ?
+      GROUP BY p.id, p.name
+      ORDER BY p.id
+    `).bind(childId).all();
+
+    // If no data exists for this child, return default stats
+    if (!stats || stats.total_completed === 0) {
+      return new Response(JSON.stringify({
+        totalCompleted: 0,
+        averageRating: 0,
+        pillarStats: pillarStats.results.map(pillar => ({
+          ...pillar,
+          completedChallenges: 0,
+          totalChallenges: 0,
+          completionRate: 0
+        }))
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Calculate completion rates
+    const pillarStatsWithRates = pillarStats.results.map(pillar => ({
+      ...pillar,
+      completedChallenges: pillar.completed_challenges,
+      totalChallenges: pillar.total_challenges,
+      completionRate: pillar.total_challenges > 0 
+        ? Math.round((pillar.completed_challenges / pillar.total_challenges) * 100) 
+        : 0
+    }));
+
+    return new Response(JSON.stringify({
+      totalCompleted: stats.total_completed,
+      averageRating: 0, // Default to 0 since we don't have ratings yet
+      pillarStats: pillarStatsWithRates
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Get specific challenge by ID
+router.get('/api/challenges/:id', async (request, env) => {
+  try {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { id } = request.params;
+    
+    // Get the challenge from database
+    const challenge = await env.DB.prepare(`
+      SELECT c.*, 
+             CASE WHEN cc.child_id IS NOT NULL THEN 1 ELSE 0 END as completed,
+             cc.completed_at
+      FROM challenges c
+      LEFT JOIN challenge_completions cc ON c.id = cc.challenge_id 
+        AND cc.child_id = (
+          SELECT id FROM children WHERE user_id = ? LIMIT 1
+        )
+      WHERE c.id = ?
+    `).bind(user.id, id).first();
+
+    // If no challenge found in database, return default challenge based on ID
+    if (!challenge) {
+      const defaultChallenges = {
+        'chal1': {
+          id: 'chal1',
+          title: 'Ask, Don\'t Tell Challenge',
+          description: 'When your child has a problem, resist the urge to jump in. Ask "What do you think you should do?" and let them think through solutions.',
+          instructions: 'Instructions for Parents:\n1. When your child comes to you with a problem, take a deep breath\n2. Instead of giving advice, ask open-ended questions like:\n   - "What have you tried so far?"\n   - "What do you think might work?"\n   - "What would happen if you tried that?"\n3. Give them time to think and respond\n4. Praise their problem-solving efforts, even if the solution isn\'t perfect',
+          pillar_id: 1,
+          completed: 0,
+          completed_at: null
+        },
+        'chal2': {
+          id: 'chal2',
+          title: 'Growth Mindset Moment',
+          description: 'Add "yet" to any statement your child makes about not being able to do something.',
+          instructions: 'Instructions for Parents:\n1. Listen for statements like "I can\'t do this" or "I\'m not good at this"\n2. Help them reframe by adding "yet"\n3. Follow up with encouraging questions:\n   - "What would help you learn this?"\n   - "Who could help you practice?"\n4. Share a story about something you learned to do with practice',
+          pillar_id: 2,
+          completed: 0,
+          completed_at: null
+        },
+        'chal3': {
+          id: 'chal3',
+          title: 'Conversation Starter',
+          description: 'Practice three conversation starters with your child: "What do you think about ___?" "That\'s cool—how did you get into it?" "What was the best part of your day?"',
+          instructions: 'Instructions for Parents:\n1. Choose a good time when your child is relaxed\n2. Try these conversation starters:\n   - "What do you think about [current event or topic]?"\n   - "That\'s cool—how did you get into it?"\n   - "What was the best part of your day?"\n3. Listen actively without interrupting\n4. Ask follow-up questions to show interest',
+          pillar_id: 3,
+          completed: 0,
+          completed_at: null
+        },
+        'chal4': {
+          id: 'chal4',
+          title: 'Strength Journal',
+          description: 'Help your child list five things they enjoy doing. Ask them what they like about each activity.',
+          instructions: 'Instructions for Parents:\n1. Create a special notebook or use a digital note\n2. Ask your child to list 5 activities they enjoy\n3. For each activity, ask:\n   - "What do you like about it?"\n   - "What makes you feel good when you do it?"\n   - "What skills do you use?"\n4. Add your own observations of their strengths\n5. Review the list together and celebrate their unique qualities',
+          pillar_id: 4,
+          completed: 0,
+          completed_at: null
+        },
+        'chal5': {
+          id: 'chal5',
+          title: 'Fear Reframing',
+          description: 'When your child expresses fear, ask "What if this goes great? What would that look like?" Help them imagine positive outcomes.',
+          instructions: 'Instructions for Parents:\n1. When your child expresses fear, listen without dismissing\n2. Ask open-ended questions:\n   - "What if this goes great?"\n   - "What would that look like?"\n   - "What\'s the best that could happen?"\n3. Help them visualize success\n4. Share a story about a time you faced and overcame a fear\n5. Create a small action plan together',
+          pillar_id: 5,
+          completed: 0,
+          completed_at: null
+        },
+        'chal6': {
+          id: 'chal6',
+          title: 'Morning Independence',
+          description: 'Let your child choose their own clothes for the day. Ask them to check the weather and decide if they need a jacket.',
+          instructions: 'Instructions for Parents:\n1. The night before, lay out weather-appropriate options\n2. In the morning, let your child choose their outfit\n3. Ask them to check the weather (you can help with this)\n4. Let them decide if they need a jacket or other weather gear\n5. Resist the urge to override their choices unless safety is at risk\n6. Praise their decision-making process',
+          pillar_id: 1,
+          completed: 0,
+          completed_at: null
+        },
+        'chal7': {
+          id: 'chal7',
+          title: 'Learning from Mistakes',
+          description: 'Share a story about a time you made a mistake and what you learned from it. Then ask your child about a mistake they learned from.',
+          instructions: 'Instructions for Parents:\n1. Share a story about a mistake you made and what you learned\n2. Ask your child about a mistake they made recently\n3. Help them identify:\n   - What happened?\n   - What did they learn?\n   - What would they do differently?\n4. Emphasize that mistakes are opportunities to learn\n5. Celebrate their growth mindset when they share their experience',
+          pillar_id: 2,
+          completed: 0,
+          completed_at: null
+        },
+        'chal8': {
+          id: 'chal8',
+          title: 'Strength Recognition',
+          description: 'Point out three specific strengths you notice in your child today.',
+          instructions: 'Instructions for Parents:\n1. Observe your child throughout the day\n2. Look for specific moments that show their strengths\n3. Point out three strengths you notice, being specific about:\n   - What they did\n   - Why it shows strength\n   - How it helps others or themselves\n4. Write these strengths down together\n5. Ask them how they feel about these strengths',
+          pillar_id: 4,
+          completed: 0,
+          completed_at: null
+        }
+      };
+
+      const defaultChallenge = defaultChallenges[id];
+      if (!defaultChallenge) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: 'Challenge not found' 
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      return new Response(JSON.stringify(defaultChallenge), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    return new Response(JSON.stringify(challenge), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    console.error('Error fetching challenge:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Get pillar-specific progress for a child
+router.get('/api/progress/pillar/:pillarId/child/:childId', async (request, env) => {
+  try {
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const { pillarId, childId } = request.params;
+    
+    // Get total challenges for this pillar
+    const totalChallenges = await env.DB.prepare(`
+      SELECT COUNT(*) as total
+      FROM challenges
+      WHERE pillar_id = ?
+    `).bind(pillarId).first();
+
+    // Get completed challenges for this pillar and child
+    const completedChallenges = await env.DB.prepare(`
+      SELECT COUNT(*) as completed
+      FROM challenge_completions cc
+      JOIN challenges c ON c.id = cc.challenge_id
+      WHERE c.pillar_id = ? AND cc.child_id = ?
+    `).bind(pillarId, childId).first();
+
+    // If no data exists, return default progress
+    if (!totalChallenges || !completedChallenges) {
+      return new Response(JSON.stringify({
+        totalChallenges: 0,
+        completedChallenges: 0,
+        progressPercentage: 0,
+        recentCompletions: []
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Get recent completions
+    const recentCompletions = await env.DB.prepare(`
+      SELECT c.title, cc.completed_at
+      FROM challenge_completions cc
+      JOIN challenges c ON c.id = cc.challenge_id
+      WHERE c.pillar_id = ? AND cc.child_id = ?
+      ORDER BY cc.completed_at DESC
+      LIMIT 5
+    `).bind(pillarId, childId).all();
+
+    // Calculate progress percentage
+    const progressPercentage = totalChallenges.total > 0 
+      ? Math.round((completedChallenges.completed / totalChallenges.total) * 100) 
+      : 0;
+
+    return new Response(JSON.stringify({
+      totalChallenges: totalChallenges.total,
+      completedChallenges: completedChallenges.completed,
+      progressPercentage: progressPercentage,
+      recentCompletions: recentCompletions.results || []
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }

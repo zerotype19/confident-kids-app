@@ -6,6 +6,8 @@ import ChallengeCard from './ChallengeCard';
 import { FaLock, FaCrown } from 'react-icons/fa';
 import '../styles/ChallengeCard.css';
 
+const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
+
 const PillarDetail = () => {
   const { pillarId } = useParams();
   const [pillar, setPillar] = useState(null);
@@ -13,17 +15,17 @@ const PillarDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedChild, setSelectedChild] = useState(null);
-  const { currentUser, hasPremiumAccess } = useAuth();
+  const { user, hasPremiumAccess } = useAuth();
   const isPremium = hasPremiumAccess();
 
   useEffect(() => {
     const fetchPillarData = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         
         // Fetch pillar data
-        const pillarResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/pillars/${pillarId}`, {
+        const pillarResponse = await fetch(`${API_URL}/api/pillars/${pillarId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -38,9 +40,33 @@ const PillarDetail = () => {
 
         setPillar(pillarData);
 
+        // Set the first child as selected by default if user has children
+        if (user.children && user.children.length > 0 && !selectedChild) {
+          setSelectedChild(user.children[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPillarData();
+  }, [pillarId, user]);
+
+  // Separate useEffect for fetching challenges when child is selected
+  useEffect(() => {
+    const fetchChallenges = async () => {
+      if (!selectedChild) return;
+
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+
         // Fetch challenges for the pillar
         const challengesResponse = await fetch(
-          `${process.env.REACT_APP_API_URL}/api/pillars/${pillarId}/challenges${selectedChild ? `?childId=${selectedChild}` : ''}`,
+          `${API_URL}/api/pillars/${pillarId}/challenges?childId=${selectedChild}`,
           {
             method: 'GET',
             headers: {
@@ -55,22 +81,17 @@ const PillarDetail = () => {
           throw new Error(challengesData.message || 'Failed to fetch challenges');
         }
 
-        setChallenges(challengesData);
-        
-        // Set the first child as selected by default if user has children
-        if (currentUser.children && currentUser.children.length > 0) {
-          setSelectedChild(currentUser.children[0].id);
-        }
+        setChallenges(challengesData.challenges || []);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to load data. Please try again later.');
+        console.error('Error fetching challenges:', error);
+        setError('Failed to load challenges. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPillarData();
-  }, [pillarId, currentUser, selectedChild]);
+    fetchChallenges();
+  }, [pillarId, selectedChild]);
 
   const handleChildChange = (e) => {
     setSelectedChild(e.target.value);
@@ -110,9 +131,9 @@ const PillarDetail = () => {
           {pillar.icon && <span className="pillar-icon">{pillar.icon}</span>}
         </div>
         <div className="pillar-card-body">
-          <p>{pillar.description}</p>
+          <p>{pillar.shortDescription}</p>
           
-          {currentUser.children && currentUser.children.length > 0 && (
+          {user.children && user.children.length > 0 && (
             <div className="child-selector mb-4">
               <label htmlFor="childSelect">Select Child:</label>
               <select 
@@ -121,9 +142,9 @@ const PillarDetail = () => {
                 value={selectedChild} 
                 onChange={handleChildChange}
               >
-                {currentUser.children.map(child => (
+                {user.children.map(child => (
                   <option key={child.id} value={child.id}>
-                    {child.firstName} ({child.age} years)
+                    {child.name} ({child.age} years)
                   </option>
                 ))}
               </select>

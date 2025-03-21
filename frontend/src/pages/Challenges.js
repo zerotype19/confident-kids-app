@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useContext } from 'react';
-import AuthContext from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import '../styles/main.css';
+import '../styles/DailyChallenge.css';
+import '../styles/ChallengeCard.css';
 
 const Challenges = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [activeChild, setActiveChild] = useState(null);
   const [activeTab, setActiveTab] = useState('daily');
   const [dailyChallenge, setDailyChallenge] = useState({

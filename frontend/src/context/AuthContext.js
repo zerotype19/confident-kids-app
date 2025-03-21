@@ -76,18 +76,21 @@ const register = async (formData)  => {
 
 // Add this method to your AuthContext.js
 const hasPremiumAccess = () => {
-  return currentUser && currentUser.subscription && currentUser.subscription.status === 'active';
+  return user && user.subscription && user.subscription.status === 'active';
 };
 
 // Include it in the context value
 const value = {
-  currentUser,
+  user,
+  isAuthenticated,
   loading,
+  error,
   register,
   login,
   logout,
   updateProfile,
-  hasPremiumAccess // Add this
+  addChild,
+  hasPremiumAccess
 };
 
 
