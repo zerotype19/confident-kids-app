@@ -109,12 +109,12 @@ export function AuthProvider({ children }) {
         return null;
       }
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/profile`, {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+  },
+});
 
       const data = await response.json();
 
