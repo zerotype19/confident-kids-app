@@ -1114,6 +1114,33 @@ router.get('/api/pillars/:id/challenges', async (request, env) => {
       WHERE c.pillar_id = ?
       ORDER BY c.id
     `).bind(user.id, id).all();
+
+    // If no challenges found in database, return default challenges
+    if (!challenges.results || challenges.results.length === 0) {
+      const defaultChallenges = [
+        {
+          id: 'default-challenge-1',
+          title: 'Daily Confidence Challenge',
+          description: 'Ask your child about something they feel confident doing today and encourage them to teach you about it.',
+          pillar_id: id,
+          completed: 0,
+          completed_at: null
+        },
+        {
+          id: 'default-challenge-2',
+          title: 'Growth Mindset Exercise',
+          description: 'Help your child identify a skill they want to improve and create a simple plan to practice it.',
+          pillar_id: id,
+          completed: 0,
+          completed_at: null
+        }
+      ];
+
+      return new Response(JSON.stringify(defaultChallenges), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
     
     return new Response(JSON.stringify(challenges.results), {
       status: 200,
