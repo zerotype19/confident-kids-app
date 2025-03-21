@@ -3,8 +3,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // Create the authentication context
 const AuthContext = createContext();
 
+// Hard-code the API URL for testing if environment variables aren't working
+const API_URL = process.env.REACT_APP_API_URL || 'https://confident-kids-api.kevin-mcgovern.workers.dev';
+
 // Custom hook to use the auth context
-export const useAuth = () => {
+export const useAuth = ()  => {
   return useContext(AuthContext);
 };
 
@@ -14,12 +17,16 @@ export function AuthProvider({ children }) {
   const [userSubscription, setUserSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Add this for compatibility
 
   // Function to register a new user
   async function register(email, password, name) {
     try {
       setError('');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/register`, {
+      console.log('Registering with:', { email, name });
+      console.log('Using API URL:', API_URL);
+      
+      const response = await fetch(`${API_URL}/api/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,6 +35,7 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
+      console.log('Register response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to register');
@@ -38,9 +46,11 @@ export function AuthProvider({ children }) {
       
       // Set the current user
       setCurrentUser(data.user);
+      setIsAuthenticated(true);
       
       return data;
     } catch (error) {
+      console.error('Registration error:', error);
       setError(error.message);
       throw error;
     }
@@ -50,7 +60,10 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     try {
       setError('');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/login`, {
+      console.log('Logging in with:', { email });
+      console.log('Using API URL:', API_URL);
+      
+      const response = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,6 +72,7 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
+      console.log('Login response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to login');
@@ -69,12 +83,16 @@ export function AuthProvider({ children }) {
       
       // Set the current user
       setCurrentUser(data.user);
+      setIsAuthenticated(true);
+      
+      console.log('Auth state after login:', { user: data.user, isAuthenticated: true });
       
       // Fetch subscription status
       await fetchSubscriptionStatus();
       
       return data;
     } catch (error) {
+      console.error('Login error:', error);
       setError(error.message);
       throw error;
     }
@@ -90,6 +108,7 @@ export function AuthProvider({ children }) {
       // Clear the current user
       setCurrentUser(null);
       setUserSubscription(null);
+      setIsAuthenticated(false);
       
       return true;
     } catch (error) {
@@ -105,35 +124,42 @@ export function AuthProvider({ children }) {
       
       if (!token) {
         setCurrentUser(null);
+        setIsAuthenticated(false);
         setLoading(false);
         return null;
       }
       
-     const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/profile`, {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-  },
-});
+      console.log('Fetching user profile with token:', token.substring(0, 10) + '...');
+      
+      const response = await fetch(`${API_URL}/api/users/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
       const data = await response.json();
+      console.log('User profile response:', data);
 
       if (!response.ok) {
         // If token is invalid, clear it
         if (response.status === 401) {
           localStorage.removeItem('authToken');
           setCurrentUser(null);
+          setIsAuthenticated(false);
           setLoading(false);
           return null;
         }
         throw new Error(data.message || 'Failed to fetch user profile');
       }
 
-      setCurrentUser(data.user);
-      return data.user;
+      setCurrentUser(data.user || data); // Handle both {user: {...}} and direct user object
+      setIsAuthenticated(true);
+      return data.user || data;
     } catch (error) {
       console.error('Error fetching current user:', error);
       setCurrentUser(null);
+      setIsAuthenticated(false);
       return null;
     } finally {
       setLoading(false);
@@ -150,7 +176,9 @@ export function AuthProvider({ children }) {
         return null;
       }
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/subscriptions/status`, {
+      console.log('Fetching subscription status');
+      
+      const response = await fetch(`${API_URL}/api/subscriptions/status`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -158,6 +186,7 @@ export function AuthProvider({ children }) {
       });
 
       const data = await response.json();
+      console.log('Subscription status response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch subscription status');
@@ -182,7 +211,7 @@ export function AuthProvider({ children }) {
         throw new Error('Not authenticated');
       }
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/update`, {
+      const response = await fetch(`${API_URL}/api/users/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -218,19 +247,23 @@ export function AuthProvider({ children }) {
   // Effect to fetch the current user when the component mounts
   useEffect(() => {
     async function loadUserData() {
+      console.log('Loading user data on mount');
       const user = await fetchCurrentUser();
       if (user) {
+        console.log('User found, fetching subscription status');
         await fetchSubscriptionStatus();
       }
     }
     
     loadUserData();
-  }, []);
+  }, []); // Empty dependency array is fine for initial load
 
   // Create the value object that will be provided to consumers
   const value = {
     currentUser,
+    user: currentUser, // Add alias for compatibility
     userSubscription,
+    isAuthenticated, // Add this for compatibility
     loading,
     error,
     register,
@@ -242,9 +275,18 @@ export function AuthProvider({ children }) {
     hasPremiumAccess
   };
 
+  console.log('AuthContext state:', { 
+    isAuthenticated, 
+    hasUser: !!currentUser, 
+    hasSubscription: !!userSubscription,
+    loading
+  });
+
   return (
     <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   );
 }
+
+export default AuthContext;
