@@ -399,7 +399,7 @@ router.get('/api/users/profile', async (request, env) => {
 });
 
 
-// Add this to your Cloudflare Worker
+// Updated Dashboard Endpoint
 router.get('/api/dashboard', async (request, env) => {
   try {
     // Verify JWT token and get user
@@ -411,31 +411,75 @@ router.get('/api/dashboard', async (request, env) => {
       });
     }
     
-    // Get pillars data
-    const pillars = await env.DB.prepare(`
-      SELECT * FROM pillars
-    `).all();
-    
-    // Get children data for this user
+    // Get user's children
     const children = await env.DB.prepare(`
       SELECT * FROM children WHERE user_id = ?
     `).bind(user.id).all();
     
-    // Get recent activities
-    const recentActivities = await env.DB.prepare(`
-      SELECT p.*, c.name as child_name, t.title as technique_title
-      FROM progress p
-      JOIN children c ON p.child_id = c.id
-      JOIN content t ON p.technique_id = t.id
-      WHERE p.user_id = ?
-      ORDER BY p.completed_at DESC
-      LIMIT 5
+    // Default to first child if available
+    let selectedChildId = null;
+    if (children.results && children.results.length > 0) {
+      selectedChildId = children.results[0].id;
+    }
+    
+    // Get pillars data with progress information
+    const pillars = await env.DB.prepare(`
+      SELECT p.id, p.name, p.short_description,
+        (SELECT COUNT(*) FROM progress pr 
+         WHERE pr.pillar_id = p.id AND pr.user_id = ? AND pr.completed = 1) as activitiesCompleted,
+        (SELECT COUNT(*) FROM content c WHERE c.pillar_id = p.id) as totalActivities
+      FROM pillars p
     `).bind(user.id).all();
     
+    // Calculate progress for each pillar
+    const pillarsWithProgress = pillars.results.map(pillar => {
+      const progress = pillar.totalActivities > 0 
+        ? Math.round((pillar.activitiesCompleted / pillar.totalActivities) * 100) 
+        : 0;
+      
+      return {
+        id: pillar.id,
+        name: pillar.name,
+        shortDescription: pillar.short_description,
+        progress: progress,
+        activitiesCompleted: pillar.activitiesCompleted,
+        totalActivities: pillar.totalActivities
+      };
+    });
+    
+    // Calculate overall progress
+    const totalActivities = pillarsWithProgress.reduce((sum, pillar) => sum + pillar.totalActivities, 0);
+    const completedActivities = pillarsWithProgress.reduce((sum, pillar) => sum + pillar.activitiesCompleted, 0);
+    const overallProgress = totalActivities > 0 
+      ? Math.round((completedActivities / totalActivities) * 100) 
+      : 0;
+    
+    // Get today's challenge
+    const todayChallenge = await env.DB.prepare(`
+      SELECT * FROM challenges 
+      ORDER BY RANDOM() 
+      LIMIT 1
+    `).first();
+    
+    // If no challenges in database, provide a default one
+    const defaultChallenge = {
+      id: 'default-challenge',
+      title: 'Daily Confidence Challenge',
+      description: 'Ask your child about something they feel confident doing today and encourage them to teach you about it.',
+      pillarId: 1
+    };
+    
+    // Get user points
+    const userPoints = await env.DB.prepare(`
+      SELECT points FROM users WHERE id = ?
+    `).bind(user.id).first();
+    
     return new Response(JSON.stringify({
-      pillars: pillars.results || [],
-      children: children.results || [],
-      recentActivities: recentActivities.results || []
+      overallProgress: overallProgress,
+      activitiesCompleted: completedActivities,
+      points: userPoints ? userPoints.points : 0,
+      todayChallenge: todayChallenge || defaultChallenge,
+      pillars: pillarsWithProgress
     }), {
       headers: {
         'Content-Type': 'application/json',
@@ -443,7 +487,10 @@ router.get('/api/dashboard', async (request, env) => {
       }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ message: error.message }), {
+    return new Response(JSON.stringify({ 
+      message: error.message,
+      stack: error.stack 
+    }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
@@ -452,6 +499,7 @@ router.get('/api/dashboard', async (request, env) => {
     });
   }
 });
+
 
 
 // Add child to user profile
