@@ -9,7 +9,7 @@ const Profile = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [children, setChildren] = useState([]);
-  const [newChild, setNewChild] = useState({ name: '', age: '' });
+  const [newChild, setNewChild] = useState({ name: '', age: '', ageGroup: 'elementary' });
   const [subscriptionDetails, setSubscriptionDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,8 +61,8 @@ const Profile = () => {
   const handleAddChild = async (e) => {
     e.preventDefault();
     
-    if (!newChild.name || !newChild.age) {
-      return setError('Please provide both name and age');
+    if (!newChild.name || !newChild.age || !newChild.ageGroup) {
+      return setError('Please provide name, age, and age group');
     }
     
     try {
@@ -89,7 +89,7 @@ const Profile = () => {
       
       // Update children list
       setChildren([...children, data.child]);
-      setNewChild({ name: '', age: '' });
+      setNewChild({ name: '', age: '', ageGroup: 'elementary' });
       setSuccess('Child added successfully');
     } catch (error) {
       setError(error.message || 'Failed to add child');
@@ -370,6 +370,21 @@ const Profile = () => {
                   onChange={(e) => setNewChild({ ...newChild, age: e.target.value })}
                   required
                 />
+              </div>
+              
+              <div className="form-group mb-3">
+                <label htmlFor="childAgeGroup">Age Group</label>
+                <select
+                  id="childAgeGroup"
+                  className="form-control"
+                  value={newChild.ageGroup}
+                  onChange={(e) => setNewChild({ ...newChild, ageGroup: e.target.value })}
+                  required
+                >
+                  <option value="toddler">Toddler (2-4)</option>
+                  <option value="elementary">Elementary (5-10)</option>
+                  <option value="teen">Teen (11-18)</option>
+                </select>
               </div>
               
               <button
