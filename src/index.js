@@ -1087,17 +1087,40 @@ router.get('/api/pillars', async (request, env) => {
 // Get challenges for a specific pillar
 router.get('/api/pillars/:id/challenges', async (request, env) => {
   try {
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
     const { id } = request.params;
     
-    const challenges = await env.DB.prepare(
-      'SELECT * FROM challenges WHERE pillar_id = ? ORDER BY id'
-    ).bind(id).all();
+    // Get challenges for the pillar
+    const challenges = await env.DB.prepare(`
+      SELECT c.*, 
+             CASE WHEN cc.child_id IS NOT NULL THEN 1 ELSE 0 END as completed,
+             cc.completed_at
+      FROM challenges c
+      LEFT JOIN challenge_completions cc ON c.id = cc.challenge_id 
+        AND cc.child_id = (
+          SELECT id FROM children WHERE user_id = ? LIMIT 1
+        )
+      WHERE c.pillar_id = ?
+      ORDER BY c.id
+    `).bind(user.id, id).all();
     
     return new Response(JSON.stringify(challenges.results), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
+    console.error('Error fetching pillar challenges:', error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message 
