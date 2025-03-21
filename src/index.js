@@ -992,9 +992,93 @@ async function checkAndUpdateAchievements(userId, childId, env) {
   }
 }
 
-// Export default function to handle requests
+// Modified export default to fix response format for the frontend
 export default {
   async fetch(request, env, ctx) {
-    return router.handle(request, env, ctx);
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method;
+    
+    console.log(`Received ${method} request for path: ${path}`);
+    
+    // Direct handling for the problematic endpoint
+    if (path === '/api/children' && method === 'POST') {
+      try {
+        // Get the token from the Authorization header
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        
+        // Extract the token
+        const token = authHeader.split(' ')[1];
+        
+        // Decode the token
+        let userData;
+        try {
+          userData = JSON.parse(atob(token));
+        } catch (error) {
+          return new Response(JSON.stringify({ error: 'Invalid token' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        
+        // Parse the request body
+        const data = await request.json();
+        console.log('Received data:', data);
+        
+        // Validate required fields
+        if (!data.name || !data.age || !data.ageGroup) {
+          return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        
+        // Generate a child ID
+        const childId = crypto.randomUUID();
+        
+        // Insert the child
+        await env.DB.prepare(
+          'INSERT INTO children (id, user_id, name, age, age_group, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(childId, userData.id, data.name, data.age, data.ageGroup, Date.now()).run();
+        
+        // Return the child object in the format expected by the frontend
+        return new Response(JSON.stringify({
+          child: {
+            id: childId,
+            name: data.name,
+            age: data.age,
+            age_group: data.ageGroup
+          }
+        }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      } catch (error) {
+        console.error('Error in /api/children endpoint:', error);
+        return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+    }
+    
+    // Also modify the default 404 response to return JSON
+    const routeMatch = router.findRoute(method, path);
+    if (routeMatch) {
+      request.params = routeMatch.params;
+      return routeMatch.route.handler(request, env, ctx);
+    } else {
+      // Return JSON for 404 instead of plain text
+      return new Response(JSON.stringify({ error: 'Not Found', path: path, method: method }), { 
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
   }
 };
