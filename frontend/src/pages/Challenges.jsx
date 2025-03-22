@@ -133,10 +133,19 @@ const Challenges = () => {
   };
 
   const handleCompleteChallenge = async (challengeId) => {
+    if (!challengeId) {
+      setError('Invalid challenge ID');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('No authentication token found');
+      }
+
+      if (!activeChild) {
+        throw new Error('No active child selected');
       }
 
       const response = await fetch(`${API_URL}/api/challenges/${challengeId}/complete`, {
@@ -145,11 +154,15 @@ const Challenges = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ childId: activeChild }),
+        body: JSON.stringify({ 
+          childId: activeChild,
+          completed: true 
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to mark challenge as complete');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to mark challenge as complete');
       }
 
       // Update the completed challenges set
@@ -169,6 +182,7 @@ const Challenges = () => {
         }
       }
     } catch (err) {
+      console.error('Error completing challenge:', err);
       setError(err.message);
     }
   };

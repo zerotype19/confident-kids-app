@@ -88,26 +88,35 @@ router.post('/complete', auth, async (req, res) => {
     if (!challenge) {
       return res.status(404).json({ msg: 'Challenge not found' });
     }
+
+    // Get current month and year
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
+    const currentYear = now.getFullYear();
     
-    // Check if already completed
+    // Check if already completed this month
     const existing = await Progress.findOne({
       userId: req.user.id,
       activityId: challengeId,
-      activityType: 'challenge'
+      activityType: 'challenge',
+      month: currentMonth,
+      year: currentYear
     });
     
     if (existing) {
-      return res.status(400).json({ msg: 'Challenge already completed' });
+      return res.status(400).json({ msg: 'Challenge already completed this month' });
     }
     
-    // Create progress entry
+    // Create progress entry with month and year
     const progress = new Progress({
       userId: req.user.id,
       pillarId: challenge.pillarId || 0,
       activityId: challengeId,
       activityType: 'challenge',
       completed: true,
-      notes
+      notes,
+      month: currentMonth,
+      year: currentYear
     });
     
     await progress.save();

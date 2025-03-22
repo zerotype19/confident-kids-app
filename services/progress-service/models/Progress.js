@@ -29,6 +29,14 @@ const ProgressSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
     default: Date.now
+  },
+  month: {
+    type: Number,
+    required: true
+  },
+  year: {
+    type: Number,
+    required: true
   }
 });
 

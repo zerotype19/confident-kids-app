@@ -9,7 +9,7 @@ const ChallengeCard = ({ challenge, childId, pillarId, onComplete }) => {
 
   const handleComplete = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/progress`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/challenges/${challenge.id}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -17,10 +17,7 @@ const ChallengeCard = ({ challenge, childId, pillarId, onComplete }) => {
         },
         body: JSON.stringify({
           childId,
-          pillarId,
-          activityId: challenge.id,
-          rating,
-          notes,
+          completed: true
         }),
       });
 

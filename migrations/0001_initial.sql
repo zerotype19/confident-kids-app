@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS challenge_completions (
   child_id TEXT NOT NULL,
   challenge_id TEXT NOT NULL,
   completed_at INTEGER NOT NULL,
+  month INTEGER NOT NULL,
+  year INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (child_id) REFERENCES children(id),
   FOREIGN KEY (challenge_id) REFERENCES challenges(id)
