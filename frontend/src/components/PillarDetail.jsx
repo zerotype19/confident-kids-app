@@ -15,19 +15,39 @@ const PillarDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedChild, setSelectedChild] = useState(null);
-  const { user, loading: authLoading, hasPremiumAccess } = useAuth();
+  const { currentUser, loading: authLoading, hasPremiumAccess } = useAuth();
   const isPremium = hasPremiumAccess();
 
   useEffect(() => {
-    if (user && user.children && user.children.length > 0 && !selectedChild) {
-      setSelectedChild(user.children[0].id);
+    if (currentUser && currentUser.children && currentUser.children.length > 0 && !selectedChild) {
+      console.log('Setting initial selected child:', currentUser.children[0].id);
+      setSelectedChild(currentUser.children[0].id);
+    } else {
+      console.log('User state:', {
+        hasUser: !!currentUser,
+        hasChildren: currentUser?.children?.length > 0,
+        children: currentUser?.children,
+        selectedChild
+      });
     }
-  }, [user]);
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || !selectedChild) {
-        console.log('Missing user or selectedChild:', { user, selectedChild });
+      console.log('Fetch data called with:', {
+        hasUser: !!currentUser,
+        userChildren: currentUser?.children,
+        selectedChild,
+        pillarId
+      });
+
+      if (!currentUser || !selectedChild) {
+        console.log('Missing user or selectedChild:', { 
+          hasUser: !!currentUser,
+          userChildren: currentUser?.children,
+          selectedChild,
+          pillarId 
+        });
         return;
       }
 
@@ -35,7 +55,11 @@ const PillarDetail = () => {
         setLoading(true);
         setError('');
         const token = localStorage.getItem('authToken');
-        console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
+        console.log('Fetching data with:', {
+          hasToken: !!token,
+          selectedChild,
+          pillarId
+        });
         
         if (!token) {
           throw new Error('No authentication token found');
@@ -90,7 +114,7 @@ const PillarDetail = () => {
     };
 
     fetchData();
-  }, [pillarId, user, selectedChild]);
+  }, [pillarId, currentUser, selectedChild]);
 
   const handleChildChange = (e) => {
     setSelectedChild(e.target.value);
@@ -112,7 +136,7 @@ const PillarDetail = () => {
     );
   }
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="container mt-4">
         <div className="alert alert-warning">
@@ -153,7 +177,7 @@ const PillarDetail = () => {
         <div className="pillar-card-body">
           <p>{pillar.shortDescription}</p>
           
-          {user.children && user.children.length > 0 ? (
+          {currentUser.children && currentUser.children.length > 0 ? (
             <div className="child-selector mb-4">
               <label htmlFor="childSelect">Select Child:</label>
               <select 
@@ -163,7 +187,7 @@ const PillarDetail = () => {
                 onChange={handleChildChange}
               >
                 <option value="">Select a child</option>
-                {user.children.map(child => (
+                {currentUser.children.map(child => (
                   <option key={child.id} value={child.id}>
                     {child.name} ({child.age} years)
                   </option>

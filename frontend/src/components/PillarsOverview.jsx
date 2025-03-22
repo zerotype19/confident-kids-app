@@ -7,7 +7,7 @@ import '../styles/PillarsOverview.css';
 const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
 
 const PillarsOverview = () => {
-  const { user, loading } = useAuth();
+  const { currentUser, loading } = useAuth();
   const [selectedChild, setSelectedChild] = useState(null);
   const [pillars, setPillars] = useState([]);
   const [content, setContent] = useState([]);
@@ -17,24 +17,24 @@ const PillarsOverview = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (user && user.children && user.children.length > 0 && !selectedChild) {
-      console.log('Setting initial selected child:', user.children[0].id);
-      setSelectedChild(user.children[0].id);
-    } else if (user && (!user.children || user.children.length === 0)) {
+    if (currentUser && currentUser.children && currentUser.children.length > 0 && !selectedChild) {
+      console.log('Setting initial selected child:', currentUser.children[0].id);
+      setSelectedChild(currentUser.children[0].id);
+    } else if (currentUser && (!currentUser.children || currentUser.children.length === 0)) {
       console.log('User has no children');
       setComponentLoading(false);
     }
-  }, [user, selectedChild]);
+  }, [currentUser, selectedChild]);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) {
+      if (!currentUser) {
         console.log('No user found');
         setComponentLoading(false);
         return;
       }
 
-      if (!user.children || user.children.length === 0) {
+      if (!currentUser.children || currentUser.children.length === 0) {
         console.log('User has no children');
         setComponentLoading(false);
         return;
@@ -134,7 +134,7 @@ const PillarsOverview = () => {
     };
 
     fetchData();
-  }, [user, selectedChild]);
+  }, [currentUser, selectedChild]);
 
   const handleChildChange = (e) => {
     setSelectedChild(e.target.value);
@@ -148,7 +148,7 @@ const PillarsOverview = () => {
     );
   }
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="container mt-4">
         <div className="alert alert-warning">
@@ -168,7 +168,7 @@ const PillarsOverview = () => {
 
   return (
     <div className="container mt-4">
-      {user.children && user.children.length > 0 && (
+      {currentUser.children && currentUser.children.length > 0 && (
         <div className="child-selector mb-4">
           <label htmlFor="childSelect">Select Child:</label>
           <select 
@@ -177,7 +177,7 @@ const PillarsOverview = () => {
             value={selectedChild || ''} 
             onChange={handleChildChange}
           >
-            {user.children.map(child => (
+            {currentUser.children.map(child => (
               <option key={child.id} value={child.id}>
                 {child.name} ({child.age} years)
               </option>
