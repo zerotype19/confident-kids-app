@@ -183,7 +183,7 @@ const Challenges = () => {
         },
         body: JSON.stringify({
           childId: activeChild,
-          completed: !challenge.completed
+          completed: true
         })
       });
 
@@ -191,31 +191,12 @@ const Challenges = () => {
         throw new Error(`Failed to update challenge status: ${response.statusText}`);
       }
 
-      // Then, update the progress tracking
-      const progressResponse = await fetch(`${API_URL}/api/progress`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          childId: activeChild,
-          activityId: challenge.id,
-          activityType: 'challenge',
-          completed: !challenge.completed
-        })
-      });
-
-      if (!progressResponse.ok) {
-        throw new Error(`Failed to update progress: ${progressResponse.statusText}`);
-      }
-
-      // Update local state after successful API calls
+      // Update local state after successful API call
       setCalendarChallenges(
-        calendarChallenges.map(challenge => 
-          challenge.day === day 
-            ? { ...challenge, completed: !challenge.completed } 
-            : challenge
+        calendarChallenges.map(c => 
+          c.day === day 
+            ? { ...c, completed: true } 
+            : c
         )
       );
 
@@ -228,7 +209,6 @@ const Challenges = () => {
 
       if (progressDataResponse.ok) {
         const progressData = await progressDataResponse.json();
-        // Update the challenges state with the new progress data
         setChallenges({
           completed: progressData.completedChallenges,
           total: progressData.totalChallenges,
