@@ -7,13 +7,13 @@ import '../styles/PillarsOverview.css';
 const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
 
 const PillarsOverview = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [selectedChild, setSelectedChild] = useState(null);
   const [pillars, setPillars] = useState([]);
   const [content, setContent] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [achievements, setAchievements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [componentLoading, setComponentLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const PillarsOverview = () => {
       if (!user || !selectedChild) return;
 
       try {
-        setLoading(true);
+        setComponentLoading(true);
         const token = localStorage.getItem('authToken');
         
         // Fetch pillars with child progress
@@ -70,15 +70,20 @@ const PillarsOverview = () => {
           achievementsResponse.json(),
         ]);
 
-        setPillars(pillarsData);
-        setContent(contentData);
-        setChallenges(challengesData);
-        setAchievements(achievementsData);
+        console.log('Pillars data:', pillarsData);
+        console.log('Content data:', contentData);
+        console.log('Challenges data:', challengesData);
+        console.log('Achievements data:', achievementsData);
+
+        setPillars(pillarsData.pillars || []);
+        setContent(contentData.content || []);
+        setChallenges(challengesData.challenges || []);
+        setAchievements(achievementsData.achievements || []);
       } catch (error) {
         console.error('Error fetching data:', error);
         setError(error.message || 'Failed to load data. Please try again later.');
       } finally {
-        setLoading(false);
+        setComponentLoading(false);
       }
     };
 
@@ -86,10 +91,16 @@ const PillarsOverview = () => {
   }, [user, selectedChild]);
 
   const handleChildChange = (e) => {
-    const childId = e.target.value;
-    const selected = user.children.find(child => child.id === childId);
-    setSelectedChild(selected);
+    setSelectedChild(e.target.value);
   };
+
+  if (loading || componentLoading) {
+    return (
+      <div className="container mt-4">
+        <div className="text-center p-5">Loading pillars...</div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -97,14 +108,6 @@ const PillarsOverview = () => {
         <div className="alert alert-warning">
           Please log in to view pillars.
         </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="container mt-4">
-        <div className="text-center p-5">Loading pillars...</div>
       </div>
     );
   }
@@ -125,7 +128,7 @@ const PillarsOverview = () => {
           <select 
             id="childSelect" 
             className="form-control" 
-            value={selectedChild?.id || ''} 
+            value={selectedChild || ''} 
             onChange={handleChildChange}
           >
             {user.children.map(child => (
