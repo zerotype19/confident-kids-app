@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaUser, FaCog, FaBell, FaLock, FaCreditCard } from 'react-icons/fa';
+import { FaUser, FaCog, FaBell, FaLock, FaCreditCard, FaChild, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/Profile.css';
 
@@ -8,12 +8,19 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const [newChild, setNewChild] = useState({
+    name: '',
+    age: '',
+    age_group: ''
+  });
+  const [showAddChildForm, setShowAddChildForm] = useState(false);
+  const [editingChild, setEditingChild] = useState(null);
   const { currentUser, updateProfile } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         if (!token) {
           throw new Error('No authentication token found');
         }
@@ -44,7 +51,7 @@ const Profile = () => {
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -69,6 +76,141 @@ const Profile = () => {
       await updateProfile(updatedProfile.user || updatedProfile);
     } catch (err) {
       console.error('Error updating profile:', err);
+      setError(err.message);
+    }
+  };
+
+  const handleAddChild = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Determine age group based on age
+      const age = parseInt(newChild.age);
+      let age_group = 'toddler';
+      if (age >= 5 && age <= 12) {
+        age_group = 'elementary';
+      } else if (age > 12) {
+        age_group = 'teen';
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/children`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...newChild,
+          age_group,
+          created_at: Math.floor(Date.now() / 1000)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add child');
+      }
+
+      const data = await response.json();
+      
+      // Update profile with new child
+      setProfile(prev => ({
+        ...prev,
+        children: [...(prev.children || []), data.child]
+      }));
+
+      // Reset form and hide it
+      setNewChild({ name: '', age: '', age_group: '' });
+      setShowAddChildForm(false);
+    } catch (err) {
+      console.error('Error adding child:', err);
+      setError(err.message);
+    }
+  };
+
+  const handleEditChild = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Determine age group based on age
+      const age = parseInt(editingChild.age);
+      let age_group = 'toddler';
+      if (age >= 5 && age <= 12) {
+        age_group = 'elementary';
+      } else if (age > 12) {
+        age_group = 'teen';
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/children/${editingChild.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...editingChild,
+          age_group
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update child');
+      }
+
+      const data = await response.json();
+      
+      // Update profile with edited child
+      setProfile(prev => ({
+        ...prev,
+        children: prev.children.map(child => 
+          child.id === editingChild.id ? data.child : child
+        )
+      }));
+
+      // Reset editing state
+      setEditingChild(null);
+    } catch (err) {
+      console.error('Error updating child:', err);
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteChild = async (childId) => {
+    if (!window.confirm('Are you sure you want to delete this child?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/children/${childId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete child');
+      }
+
+      // Update profile by removing the deleted child
+      setProfile(prev => ({
+        ...prev,
+        children: prev.children.filter(child => child.id !== childId)
+      }));
+    } catch (err) {
+      console.error('Error deleting child:', err);
       setError(err.message);
     }
   };
@@ -102,6 +244,12 @@ const Profile = () => {
             onClick={() => setActiveTab('profile')}
           >
             <FaUser /> Profile
+          </button>
+          <button 
+            className={`nav-item ${activeTab === 'children' ? 'active' : ''}`}
+            onClick={() => setActiveTab('children')}
+          >
+            <FaChild /> Children
           </button>
           <button 
             className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
@@ -143,6 +291,127 @@ const Profile = () => {
                 Save Changes
               </button>
             </form>
+          </div>
+        )}
+
+        {activeTab === 'children' && (
+          <div className="children-section">
+            <h3>My Children</h3>
+            
+            {profile.children && profile.children.length > 0 ? (
+              <div className="children-grid">
+                {profile.children.map(child => (
+                  <div key={child.id} className="child-card">
+                    <div className="child-avatar">
+                      <FaChild />
+                    </div>
+                    <div className="child-info">
+                      <h4>{child.name}</h4>
+                      <p>{child.age} years old</p>
+                      <p className="age-group">{child.age_group}</p>
+                    </div>
+                    <div className="child-actions">
+                      <button 
+                        className="btn btn-icon"
+                        onClick={() => setEditingChild(child)}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button 
+                        className="btn btn-icon btn-danger"
+                        onClick={() => handleDeleteChild(child.id)}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>You haven't added any children yet.</p>
+            )}
+
+            <button 
+              className="btn btn-secondary mt-4"
+              onClick={() => setShowAddChildForm(!showAddChildForm)}
+            >
+              <FaPlus className="me-2" /> Add Child
+            </button>
+
+            {showAddChildForm && (
+              <form onSubmit={handleAddChild} className="add-child-form mt-4">
+                <div className="form-group">
+                  <label>Child's Name</label>
+                  <input
+                    type="text"
+                    value={newChild.name}
+                    onChange={(e) => setNewChild({ ...newChild, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Age</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="18"
+                    value={newChild.age}
+                    onChange={(e) => setNewChild({ ...newChild, age: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Add Child
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary ms-2"
+                    onClick={() => setShowAddChildForm(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {editingChild && (
+              <form onSubmit={handleEditChild} className="add-child-form mt-4">
+                <h4>Edit Child</h4>
+                <div className="form-group">
+                  <label>Child's Name</label>
+                  <input
+                    type="text"
+                    value={editingChild.name}
+                    onChange={(e) => setEditingChild({ ...editingChild, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Age</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="18"
+                    value={editingChild.age}
+                    onChange={(e) => setEditingChild({ ...editingChild, age: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Save Changes
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary ms-2"
+                    onClick={() => setEditingChild(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
