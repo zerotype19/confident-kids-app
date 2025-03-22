@@ -24,11 +24,15 @@ const PillarsOverview = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || !selectedChild) return;
+      if (!user || !selectedChild) {
+        console.log('Missing user or selectedChild:', { user, selectedChild });
+        return;
+      }
 
       try {
         setComponentLoading(true);
         const token = localStorage.getItem('authToken');
+        console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
         
         // Fetch pillars with child progress
         const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild}`, {
@@ -39,6 +43,7 @@ const PillarsOverview = () => {
         
         if (!pillarsResponse.ok) {
           const errorData = await pillarsResponse.json();
+          console.error('Pillars response error:', errorData);
           throw new Error(errorData.error || 'Failed to fetch pillars data');
         }
         
@@ -49,6 +54,12 @@ const PillarsOverview = () => {
           },
         });
         
+        if (!contentResponse.ok) {
+          const errorData = await contentResponse.json();
+          console.error('Content response error:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch content data');
+        }
+        
         // Fetch challenges
         const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${selectedChild}`, {
           headers: {
@@ -56,12 +67,24 @@ const PillarsOverview = () => {
           },
         });
         
+        if (!challengesResponse.ok) {
+          const errorData = await challengesResponse.json();
+          console.error('Challenges response error:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch challenges data');
+        }
+        
         // Fetch achievements
         const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${selectedChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
+
+        if (!achievementsResponse.ok) {
+          const errorData = await achievementsResponse.json();
+          console.error('Achievements response error:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch achievements data');
+        }
 
         const [pillarsData, contentData, challengesData, achievementsData] = await Promise.all([
           pillarsResponse.json(),
@@ -75,10 +98,11 @@ const PillarsOverview = () => {
         console.log('Challenges data:', challengesData);
         console.log('Achievements data:', achievementsData);
 
-        setPillars(pillarsData.pillars || []);
-        setContent(contentData.content || []);
-        setChallenges(challengesData.challenges || []);
-        setAchievements(achievementsData.achievements || []);
+        // Handle the response data structure
+        setPillars(Array.isArray(pillarsData) ? pillarsData : pillarsData.pillars || []);
+        setContent(Array.isArray(contentData) ? contentData : contentData.content || []);
+        setChallenges(Array.isArray(challengesData) ? challengesData : challengesData.challenges || []);
+        setAchievements(Array.isArray(achievementsData) ? achievementsData : achievementsData.achievements || []);
       } catch (error) {
         console.error('Error fetching data:', error);
         setError(error.message || 'Failed to load data. Please try again later.');
