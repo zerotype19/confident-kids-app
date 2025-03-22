@@ -1088,17 +1088,13 @@ router.get('/api/pillars', async (request, env) => {
 router.get('/api/pillars/:pillarId/challenges', async (request, env) => {
   try {
     // Verify user is authenticated
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const user = await verifyAuth(request, env);
+    if (!user) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, env.JWT_SECRET);
-    const userId = decoded.userId;
 
     // Get pillarId from URL parameters
     const url = new URL(request.url);
@@ -1109,7 +1105,7 @@ router.get('/api/pillars/:pillarId/challenges', async (request, env) => {
     if (!childId) {
       return new Response(JSON.stringify({ success: false, error: 'Child ID is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
 
@@ -1117,12 +1113,12 @@ router.get('/api/pillars/:pillarId/challenges', async (request, env) => {
     const childResult = await env.DB.prepare(`
       SELECT * FROM children 
       WHERE id = ? AND user_id = ?
-    `).bind(childId, userId).first();
+    `).bind(childId, user.id).first();
 
     if (!childResult) {
       return new Response(JSON.stringify({ success: false, error: 'Child not found or unauthorized' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
 
@@ -1142,17 +1138,17 @@ router.get('/api/pillars/:pillarId/challenges', async (request, env) => {
       success: true, 
       challenges: challenges.results 
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
 
   } catch (error) {
     console.error('Error fetching pillar challenges:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: error.message || 'Failed to fetch challenges'
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 });
