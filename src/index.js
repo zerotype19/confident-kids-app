@@ -1355,9 +1355,10 @@ router.post('/api/challenges/:id/complete', async (request, env) => {
       }
     } else if (completed) {
       // Create new completion record
+      const completionId = `cc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await env.DB.prepare(
-        'INSERT INTO challenge_completions (challenge_id, child_id, user_id, completed_at) VALUES (?, ?, ?, ?)'
-      ).bind(id, childId, user.id, new Date().toISOString()).run();
+        'INSERT INTO challenge_completions (id, challenge_id, child_id, user_id, completed_at) VALUES (?, ?, ?, ?, ?)'
+      ).bind(completionId, id, childId, user.id, new Date().toISOString()).run();
     }
 
     // Check and update achievements
@@ -1398,7 +1399,34 @@ router.get('/api/achievements', async (request, env) => {
       });
     }
 
-    const { childId } = request.query;
+    // Get childId from URL search params
+    const url = new URL(request.url);
+    const childId = url.searchParams.get('childId');
+
+    if (!childId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Child ID is required' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Verify child belongs to user
+    const child = await env.DB.prepare(
+      'SELECT * FROM children WHERE id = ? AND user_id = ?'
+    ).bind(childId, user.id).first();
+
+    if (!child) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Child not found or access denied' 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
 
     // Get all achievements with completion status for the child
     const achievements = await env.DB.prepare(`
@@ -1411,11 +1439,15 @@ router.get('/api/achievements', async (request, env) => {
       ORDER BY a.id
     `).bind(childId).all();
 
-    return new Response(JSON.stringify(achievements.results), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      achievements: achievements.results 
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
+    console.error('Error fetching achievements:', error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message 
@@ -1977,6 +2009,53 @@ router.get('/api/progress/pillar/:pillarId/child/:childId', async (request, env)
       success: false, 
       error: error.message 
     }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
+// Get techniques for a specific pillar
+router.get('/api/content/techniques/:pillarId', async (request, env) => {
+  try {
+    const pillarId = parseInt(request.params.pillarId);
+    
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: corsHeaders
+      });
+    }
+
+    // Get techniques from database
+    const techniques = await env.DB.prepare(`
+      SELECT c.id, c.title, c.description, c.content_type, c.content_data, c.age_group
+      FROM content c
+      WHERE c.pillar_id = ? AND c.content_type = 'technique'
+      ORDER BY c.order ASC
+    `).bind(pillarId).all();
+
+    // Format the response
+    const formattedTechniques = techniques.results.map(technique => ({
+      id: technique.id,
+      title: technique.title,
+      description: technique.description,
+      content_type: technique.content_type,
+      content_data: JSON.parse(technique.content_data || '{}'),
+      age_group: technique.age_group
+    }));
+
+    return new Response(JSON.stringify(formattedTechniques), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching techniques:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
