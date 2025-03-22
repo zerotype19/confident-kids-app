@@ -27,7 +27,8 @@ const PillarDetail = () => {
         hasUser: !!currentUser,
         hasChildren: currentUser?.children?.length > 0,
         children: currentUser?.children,
-        selectedChild
+        selectedChild,
+        currentUser
       });
     }
   }, [currentUser]);
@@ -38,16 +39,24 @@ const PillarDetail = () => {
         hasUser: !!currentUser,
         userChildren: currentUser?.children,
         selectedChild,
-        pillarId
+        pillarId,
+        currentUser
       });
 
-      if (!currentUser || !selectedChild) {
-        console.log('Missing user or selectedChild:', { 
-          hasUser: !!currentUser,
-          userChildren: currentUser?.children,
-          selectedChild,
-          pillarId 
-        });
+      if (!currentUser) {
+        console.log('No user found, waiting for auth...');
+        return;
+      }
+
+      if (!currentUser.children || currentUser.children.length === 0) {
+        console.log('User has no children');
+        setLoading(false);
+        return;
+      }
+
+      if (!selectedChild) {
+        console.log('No child selected');
+        setLoading(false);
         return;
       }
 

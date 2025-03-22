@@ -254,6 +254,7 @@ export function AuthProvider({ children }) {
         if (token) {
           const userData = await fetchCurrentUser();
           if (mounted) {
+            console.log('Setting current user:', userData);
             setCurrentUser(userData);
             setIsAuthenticated(!!userData);
             if (userData) {
@@ -262,6 +263,7 @@ export function AuthProvider({ children }) {
           }
         } else {
           if (mounted) {
+            console.log('No token found, clearing user state');
             setCurrentUser(null);
             setIsAuthenticated(false);
           }
@@ -305,12 +307,13 @@ export function AuthProvider({ children }) {
     isAuthenticated, 
     hasUser: !!currentUser, 
     hasSubscription: !!userSubscription,
-    loading
+    loading,
+    currentUser
   });
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
