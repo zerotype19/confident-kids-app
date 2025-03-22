@@ -249,12 +249,22 @@ export function AuthProvider({ children }) {
     let mounted = true;
 
     async function loadUserData() {
-      console.log('Loading user data on mount');
       try {
-        const user = await fetchCurrentUser();
-        if (user && mounted) {
-          console.log('User found, fetching subscription status');
-          await fetchSubscriptionStatus();
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          const userData = await fetchCurrentUser();
+          if (mounted) {
+            setCurrentUser(userData);
+            setIsAuthenticated(!!userData);
+            if (userData) {
+              await fetchSubscriptionStatus();
+            }
+          }
+        } else {
+          if (mounted) {
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+          }
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -268,29 +278,27 @@ export function AuthProvider({ children }) {
         }
       }
     }
-    
+
     loadUserData();
 
     return () => {
       mounted = false;
     };
-  }, []); // Empty dependency array is fine for initial load
+  }, []);
 
   // Create the value object that will be provided to consumers
   const value = {
     currentUser,
-    user: currentUser, // Add alias for compatibility
     userSubscription,
-    isAuthenticated,
     loading,
     error,
+    isAuthenticated,
     register,
     login,
     logout,
     updateProfile,
-    fetchCurrentUser,
-    fetchSubscriptionStatus,
-    hasPremiumAccess
+    hasPremiumAccess,
+    fetchSubscriptionStatus
   };
 
   console.log('AuthContext state:', { 
@@ -302,7 +310,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

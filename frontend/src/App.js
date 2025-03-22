@@ -20,25 +20,42 @@ import ChallengeDetail from './components/ChallengeDetail';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="container mt-4"><div className="text-center p-5">Loading...</div></div>;
+  }
+  
   if (!currentUser) {
     return <Navigate to="/login" />;
   }
+  
   return children;
 };
 
 // Premium route component
 const PremiumRoute = ({ children }) => {
-  const { hasPremiumAccess } = useAuth();
+  const { hasPremiumAccess, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="container mt-4"><div className="text-center p-5">Loading...</div></div>;
+  }
+  
   if (!hasPremiumAccess()) {
     return <Navigate to="/subscription" />;
   }
+  
   return children;
 };
 
 // Root redirect component
 const RootRedirect = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="container mt-4"><div className="text-center p-5">Loading...</div></div>;
+  }
+  
   return <Navigate to={currentUser ? "/dashboard" : "/"} />;
 };
 
