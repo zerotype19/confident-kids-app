@@ -15,6 +15,12 @@ const Challenges = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completedChallenges, setCompletedChallenges] = useState(new Set());
+  const [calendarChallenges, setCalendarChallenges] = useState([]);
+  const [challenges, setChallenges] = useState({
+    completed: 0,
+    total: 0,
+    streak: 0
+  });
 
   useEffect(() => {
     if (currentUser && currentUser.children && currentUser.children.length > 0 && !activeChild) {
@@ -74,6 +80,34 @@ const Challenges = () => {
           const completedData = await completedResponse.json();
           setCompletedChallenges(new Set(completedData.completed_challenges.map(c => c.id)));
         }
+
+        // Fetch calendar challenges
+        const calendarResponse = await fetch(`${API_URL}/api/challenges/calendar?childId=${activeChild}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (calendarResponse.ok) {
+          const calendarData = await calendarResponse.json();
+          setCalendarChallenges(calendarData.challenges);
+        }
+
+        // Fetch progress tracking data
+        const progressResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json();
+          setChallenges({
+            completed: progressData.completedChallenges,
+            total: progressData.totalChallenges,
+            streak: progressData.streak || 0
+          });
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -127,6 +161,83 @@ const Challenges = () => {
       }
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleCalendarChallengeToggle = async (day) => {
+    if (!activeChild) {
+      setError('No active child selected');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const challenge = calendarChallenges.find(c => c.day === day);
+      
+      // First, mark the challenge as complete
+      const response = await fetch(`${API_URL}/api/challenges/${challenge.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          childId: activeChild.id,
+          completed: !challenge.completed
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update challenge status: ${response.statusText}`);
+      }
+
+      // Then, update the progress tracking
+      const progressResponse = await fetch(`${API_URL}/api/progress`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          childId: activeChild.id,
+          activityId: challenge.id,
+          activityType: 'challenge',
+          completed: !challenge.completed
+        })
+      });
+
+      if (!progressResponse.ok) {
+        throw new Error(`Failed to update progress: ${progressResponse.statusText}`);
+      }
+
+      // Update local state after successful API calls
+      setCalendarChallenges(
+        calendarChallenges.map(challenge => 
+          challenge.day === day 
+            ? { ...challenge, completed: !challenge.completed } 
+            : challenge
+        )
+      );
+
+      // Refresh the progress tracking data
+      const progressDataResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (progressDataResponse.ok) {
+        const progressData = await progressDataResponse.json();
+        // Update the challenges state with the new progress data
+        setChallenges({
+          completed: progressData.completedChallenges,
+          total: progressData.totalChallenges,
+          streak: progressData.streak || 0
+        });
+      }
+    } catch (err) {
+      console.error('Error updating challenge status:', err);
+      setError(`Failed to update challenge status. Please try again later.`);
     }
   };
 
@@ -187,6 +298,12 @@ const Challenges = () => {
         >
           Weekly Challenges
         </button>
+        <button 
+          className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
+        >
+          Calendar
+        </button>
       </div>
 
       {activeTab === 'daily' ? (
@@ -229,7 +346,7 @@ const Challenges = () => {
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === 'weekly' ? (
         <div className="weekly-challenges">
           {weeklyChallenges.length > 0 ? (
             <div className="challenges-grid">
@@ -272,6 +389,46 @@ const Challenges = () => {
               No weekly challenges available at the moment.
             </div>
           )}
+        </div>
+      ) : (
+        <div className="calendar-challenges-tab">
+          <div className="calendar-header">
+            <h2>30-Day Challenge Calendar</h2>
+            <p>Complete one challenge each day to build lasting confidence and skills.</p>
+            <div className="progress-stats">
+              <div className="stat-card">
+                <h3>Challenges Completed</h3>
+                <p className="stat-number">{challenges.completed}/{challenges.total}</p>
+              </div>
+              <div className="stat-card">
+                <h3>Current Streak</h3>
+                <p className="stat-number">{challenges.streak} days</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="calendar-challenges">
+            {calendarChallenges.map(challenge => (
+              <div 
+                key={challenge.day} 
+                className={`calendar-day ${challenge.completed ? 'completed' : ''}`}
+              >
+                <div className="day-number">Day {challenge.day}</div>
+                <div className="day-content">
+                  <h3>{challenge.title}</h3>
+                  <p>{challenge.description}</p>
+                </div>
+                <div className="day-action">
+                  <button 
+                    className={`btn ${challenge.completed ? 'btn-success' : 'btn-primary'}`}
+                    onClick={() => handleCalendarChallengeToggle(challenge.day)}
+                  >
+                    {challenge.completed ? 'Completed' : 'Mark Complete'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

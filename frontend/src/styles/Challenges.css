@@ -1,0 +1,113 @@
+/* Calendar Styles */
+.calendar-challenges-tab {
+  padding: 2rem;
+}
+
+.calendar-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.calendar-header h2 {
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.stat-card {
+  background: var(--neutral-100);
+  padding: 1rem 2rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card h3 {
+  color: var(--neutral-600);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-number {
+  color: var(--primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.calendar-challenges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.calendar-day {
+  background: var(--neutral-100);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.calendar-day:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.calendar-day.completed {
+  background: var(--success);
+  color: var(--neutral-100);
+}
+
+.calendar-day.completed .day-number,
+.calendar-day.completed .day-content h3,
+.calendar-day.completed .day-content p {
+  color: var(--neutral-100);
+}
+
+.day-number {
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.day-content h3 {
+  color: var(--neutral-700);
+  margin-bottom: 0.5rem;
+}
+
+.day-content p {
+  color: var(--neutral-500);
+  margin-bottom: 1rem;
+}
+
+.day-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.day-action .btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all var(--transition-normal);
+}
+
+.day-action .btn-primary {
+  background: var(--primary);
+  color: var(--neutral-100);
+}
+
+.day-action .btn-success {
+  background: var(--success);
+  color: var(--neutral-100);
+}
+
+.day-action .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+} 
