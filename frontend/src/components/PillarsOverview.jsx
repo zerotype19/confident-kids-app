@@ -2,29 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaStar, FaTrophy, FaCalendarAlt } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
+import { useChild } from '../contexts/ChildContext';
+import ChildSelector from './ChildSelector';
 import '../styles/PillarsOverview.css';
 
 const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
 
 const PillarsOverview = () => {
   const { currentUser, loading } = useAuth();
-  const [selectedChild, setSelectedChild] = useState(null);
+  const { activeChild } = useChild();
   const [pillars, setPillars] = useState([]);
   const [content, setContent] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [componentLoading, setComponentLoading] = useState(true);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (currentUser && currentUser.children && currentUser.children.length > 0 && !selectedChild) {
-      console.log('Setting initial selected child:', currentUser.children[0].id);
-      setSelectedChild(currentUser.children[0].id);
-    } else if (currentUser && (!currentUser.children || currentUser.children.length === 0)) {
-      console.log('User has no children');
-      setComponentLoading(false);
-    }
-  }, [currentUser, selectedChild]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,7 +32,7 @@ const PillarsOverview = () => {
         return;
       }
 
-      if (!selectedChild) {
+      if (!activeChild) {
         console.log('No child selected');
         setComponentLoading(false);
         return;
@@ -50,14 +42,14 @@ const PillarsOverview = () => {
         setComponentLoading(true);
         const token = localStorage.getItem('authToken');
         console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
-        console.log('Selected child:', selectedChild);
+        console.log('Selected child:', activeChild);
         
         if (!token) {
           throw new Error('No authentication token found');
         }
         
         // Fetch pillars with child progress
-        const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild}`, {
+        const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${activeChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -83,7 +75,7 @@ const PillarsOverview = () => {
         }
         
         // Fetch challenges
-        const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${selectedChild}`, {
+        const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${activeChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -96,7 +88,7 @@ const PillarsOverview = () => {
         }
         
         // Fetch achievements
-        const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${selectedChild}`, {
+        const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${activeChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -129,12 +121,7 @@ const PillarsOverview = () => {
     };
 
     fetchData();
-  }, [currentUser, selectedChild]);
-
-  const handleChildChange = (e) => {
-    const childId = e.target.value;
-    setSelectedChild(childId);
-  };
+  }, [currentUser, activeChild]);
 
   if (loading || componentLoading) {
     return (
@@ -164,21 +151,7 @@ const PillarsOverview = () => {
 
   return (
     <div className="container mt-4">
-      <div className="child-selector mb-4">
-        <label htmlFor="childSelect">Select Child:</label>
-        <select 
-          id="childSelect" 
-          className="form-control" 
-          value={selectedChild || ''} 
-          onChange={handleChildChange}
-        >
-          {currentUser.children.map(child => (
-            <option key={child.id} value={child.id}>
-              {child.name} ({child.age} years)
-            </option>
-          ))}
-        </select>
-      </div>
+      <ChildSelector />
 
       <div className="pillars-grid">
         {pillars.map(pillar => (

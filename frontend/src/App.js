@@ -79,12 +79,12 @@ const App = () => {
               } />
               <Route path="/pillars" element={
                 <ProtectedRoute>
-                  <PillarView />
+                  <PillarsOverview />
                 </ProtectedRoute>
               } />
               <Route path="/pillars/:pillarId" element={
                 <ProtectedRoute>
-                  <PillarDetail />
+                  <PillarView />
                 </ProtectedRoute>
               } />
               <Route path="/pillars/:pillarId/techniques" element={
