@@ -117,10 +117,20 @@ const Profile = () => {
       }
 
       const data = await response.json();
-      setProfile(prev => ({
-        ...prev,
-        children: [...prev.children, data.child]
-      }));
+      
+      // Fetch updated profile data
+      const profileResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch updated profile');
+      }
+
+      const profileData = await profileResponse.json();
+      setProfile(profileData.user || profileData);
       setNewChild({ name: '', age: '' });
       setShowAddChildForm(false);
     } catch (error) {
@@ -165,13 +175,19 @@ const Profile = () => {
         throw new Error('Failed to update child');
       }
 
-      const data = await response.json();
-      setProfile(prev => ({
-        ...prev,
-        children: prev.children.map(child => 
-          child.id === editingChild.id ? data.child : child
-        )
-      }));
+      // Fetch updated profile data
+      const profileResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch updated profile');
+      }
+
+      const profileData = await profileResponse.json();
+      setProfile(profileData.user || profileData);
       setEditingChild(null);
     } catch (error) {
       console.error('Error updating child:', error);
@@ -201,10 +217,19 @@ const Profile = () => {
         throw new Error('Failed to delete child');
       }
 
-      setProfile(prev => ({
-        ...prev,
-        children: prev.children.filter(child => child.id !== childId)
-      }));
+      // Fetch updated profile data
+      const profileResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!profileResponse.ok) {
+        throw new Error('Failed to fetch updated profile');
+      }
+
+      const profileData = await profileResponse.json();
+      setProfile(profileData.user || profileData);
     } catch (error) {
       console.error('Error deleting child:', error);
       setError(error.message);
