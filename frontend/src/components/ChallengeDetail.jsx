@@ -9,21 +9,21 @@ const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
 const ChallengeDetail = () => {
   const { challengeId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
   const [challenge, setChallenge] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedChild, setSelectedChild] = useState(null);
 
   useEffect(() => {
-    if (user && user.children && user.children.length > 0 && !selectedChild) {
-      setSelectedChild(user.children[0].id);
+    if (currentUser && currentUser.children && currentUser.children.length > 0 && !selectedChild) {
+      setSelectedChild(currentUser.children[0].id);
     }
-  }, [user]);
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchChallenge = async () => {
-      if (!user || !selectedChild) return;
+      if (!currentUser || !selectedChild) return;
 
       try {
         setLoading(true);
@@ -54,7 +54,7 @@ const ChallengeDetail = () => {
     };
 
     fetchChallenge();
-  }, [challengeId, user, selectedChild]);
+  }, [challengeId, currentUser, selectedChild]);
 
   const handleComplete = async () => {
     if (!challenge || !selectedChild) return;
@@ -89,11 +89,11 @@ const ChallengeDetail = () => {
 
   const handleChildChange = (e) => {
     const childId = e.target.value;
-    const selected = user.children.find(child => child.id === childId);
+    const selected = currentUser.children.find(child => child.id === childId);
     setSelectedChild(selected);
   };
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="container mt-4">
         <div className="alert alert-warning">
@@ -137,7 +137,7 @@ const ChallengeDetail = () => {
       </button>
 
       <div className="daily-challenge">
-        {user.children && user.children.length > 0 && (
+        {currentUser.children && currentUser.children.length > 0 && (
           <div className="child-selector mb-4">
             <label htmlFor="childSelect">Select Child:</label>
             <select 
@@ -146,7 +146,7 @@ const ChallengeDetail = () => {
               value={selectedChild?.id || ''} 
               onChange={handleChildChange}
             >
-              {user.children.map(child => (
+              {currentUser.children.map(child => (
                 <option key={child.id} value={child.id}>
                   {child.name} ({child.age} years)
                 </option>
@@ -172,52 +172,29 @@ const ChallengeDetail = () => {
         </div>
 
         <div className="challenge-content">
-          <p>{challenge.description}</p>
+          <p className="description">{challenge.description}</p>
           
-          <div className="challenge-steps">
+          <div className="instructions">
             <h4>Instructions for Parents:</h4>
-            <div className="step">
-              <span className="step-number">1</span>
-              <p>Find a quiet, comfortable space with your child</p>
-            </div>
-            <div className="step">
-              <span className="step-number">2</span>
-              <p>Guide your child through the breathing exercise</p>
-            </div>
-            <div className="step">
-              <span className="step-number">3</span>
-              <p>Practice together until your child feels comfortable</p>
-            </div>
-            <div className="step">
-              <span className="step-number">4</span>
-              <p>Encourage your child to use this technique when needed</p>
-            </div>
+            <p>{challenge.instructions}</p>
           </div>
 
-          <div className="challenge-rewards">
-            <h4>Rewards</h4>
-            <ul>
-              <li>
-                <FaStar className="reward-icon" />
-                Builds emotional regulation skills
-              </li>
-              <li>
-                <FaStar className="reward-icon" />
-                Reduces anxiety and stress
-              </li>
-              <li>
-                <FaStar className="reward-icon" />
-                Strengthens parent-child bond
-              </li>
-            </ul>
-          </div>
+          {challenge.materials && (
+            <div className="materials">
+              <h4>Materials Needed:</h4>
+              <p>{challenge.materials}</p>
+            </div>
+          )}
 
-          <button 
-            className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'} complete-challenge`}
-            onClick={handleComplete}
-          >
-            <FaCheck /> {challenge.completed ? 'Mark as Incomplete' : 'Complete Challenge'}
-          </button>
+          <div className="challenge-actions">
+            <button 
+              className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'}`}
+              onClick={handleComplete}
+            >
+              <FaCheck className="me-2" />
+              {challenge.completed ? 'Mark as Incomplete' : 'Mark as Complete'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
