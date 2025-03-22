@@ -1,0 +1,10 @@
+{
+  "name": "challenges-upload-script",
+  "version": "1.0.0",
+  "description": "Script to upload challenges from CSV to the API",
+  "main": "upload_challenges.js",
+  "dependencies": {
+    "csv-parse": "^5.5.3",
+    "node-fetch": "^2.7.0"
+  }
+} 
