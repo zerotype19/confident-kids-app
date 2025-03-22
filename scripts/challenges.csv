@@ -1,0 +1,51 @@
+id,title,description,pillar_id,day,age_group,difficulty_level
+chal8,The Two-Option Trick,Let your child make a decision today by offering two equally acceptable choices.,1,8,all,3
+chal9,Weather Wisdom,"Ask your child, 'What will you need for today’s weather?' and let them figure it out.",1,9,all,1
+chal10,Pack-It Practice,"Have your child pack their own backpack or lunch, guiding only if asked.",1,10,all,1
+chal11,Tiny Tidy Time,"Ask, 'What’s one small area you could tidy up today all by yourself?'",1,11,all,2
+chal12,Future You Check-In,Ask: 'What could Future You do differently next time?',1,12,all,2
+chal13,Oops Recovery Plan,"When your child makes a mistake, guide them to think through what to do next.",1,13,all,1
+chal14,What’s Missing?,"Before leaving the house, ask: 'Are we forgetting anything?'",1,14,all,1
+chal15,Decision Decoder,Ask: 'What are your choices? What happens if you pick each one?',1,15,all,3
+chal16,Map It Out,"Let your child plan part of the day (e.g., snack time, outfit, activity).",1,16,all,2
+chal17,"Try First, Ask Later",Encourage your child to try something independently before asking for help.,1,17,all,1
+chal18,The Power of Yet,"Every time your child says 'I can’t,' add 'yet' and ask what they can try next.",2,18,all,3
+chal19,One Step Forward,"When something feels hard, ask: 'What’s one small step you can take?'",2,19,all,2
+chal20,Mini-Win Celebration,"At the end of the day, name one thing your child improved on—no matter how small.",2,20,all,3
+chal21,Effort Detective,Catch your child trying hard today and praise that effort.,2,21,all,1
+chal22,Mess-Up Motto,Share a time you made a mistake and what you learned.,2,22,all,1
+chal23,Before & After Boost,Ask your child: 'What’s something you used to struggle with that feels easier now?',2,23,all,2
+chal24,Build-A-Brain Talk,Explain: 'Your brain gets stronger when you try hard things.',2,24,all,3
+chal25,Try 3 Before Me,Encourage your child to try three things before asking for help.,2,25,all,1
+chal26,Frustration Flip,Help your child name how they feel and brainstorm a new approach.,2,26,all,1
+chal27,Challenge of the Day,Choose a small task together that feels a little hard—and do it anyway!,2,27,all,1
+chal28,Hi-5 Challenge,Encourage your child to say 'hi' to five people today.,3,28,all,3
+chal29,Question Master,Practice three conversation-starting questions and use one during the day.,3,29,all,1
+chal30,Role-Switch Game,Pretend your child is the teacher or coach and you’re the student—practice a conversation.,3,30,all,1
+chal31,Name Game,Ask your child to learn the name of someone new at school today.,3,31,all,1
+chal32,Kind Comment,Challenge your child to say one kind thing to someone today.,3,32,all,2
+chal33,Tone Detective,Practice saying the same sentence with different tones—how does the meaning change?,3,33,all,2
+chal34,Eye Contact Practice,Practice making eye contact when speaking and listening.,3,34,all,1
+chal35,Body Talk Bingo,Notice and name different types of body language today—what do they say?,3,35,all,1
+chal36,Confidence Mirror,Have your child practice a confident greeting in front of a mirror.,3,36,all,1
+chal37,Rewind & Replay,"After a social stumble, ask: 'What would you do differently next time?'",3,37,all,2
+chal38,Strength Snapshot,Ask your child: 'What’s something you’re proud of doing this week?',4,38,all,1
+chal39,Joy List,"Together, make a list of 5 things your child enjoys doing—no judgment.",4,39,all,2
+chal40,Teach Me Something,Let your child teach you how to do something they love.,4,40,all,2
+chal41,Strength Scavenger Hunt,Spot three moments today when your child showed a personal strength.,4,41,all,3
+chal42,Interest Interview,"Ask: 'If you could spend the whole day doing one thing, what would it be and why?'",4,42,all,3
+chal43,Try Something New Together,Pick a new activity to try together—focus on fun and exploration.,4,43,all,3
+chal44,Dream Poster,Have your child draw a poster of what they might want to be or do one day.,4,44,all,2
+chal45,Small Skill Tracker,Choose one interest and write down a small improvement each week.,4,45,all,2
+chal46,Compliment Swap,"Share a specific compliment with your child, then ask them to do the same to themselves.",4,46,all,1
+chal47,Purpose in Action,Ask your child: 'How can you help someone today using one of your strengths?',4,47,all,2
+chal48,Fear Talk Flip,"When your child is worried, ask: 'What’s the best thing that could happen?'",5,48,all,2
+chal49,Nervous ≠ Bad,Teach: 'Feeling nervous just means you care. It’s okay!',5,49,all,2
+chal50,Bravery Meter,Have your child rate how brave they felt in a tough situation today (1–10).,5,50,all,3
+chal51,Tiny Brave Step,Identify one small brave thing your child could try today—even if it’s tiny.,5,51,all,2
+chal52,Breathe With Me,Practice slow breathing together before a stressful moment.,5,52,all,3
+chal53,Anxiety Antidote,Ask: 'What’s one thing that makes you feel calm when you're worried?',5,53,all,1
+chal54,Body Clues Game,Talk about how the body feels when we’re nervous—what can we notice?,5,54,all,3
+chal55,What Went Right?,"After something scary, reflect: 'What went better than you expected?'",5,55,all,2
+chal56,Bravery Jar,Write down one brave thing your child did today and add it to a jar.,5,56,all,1
+chal57,I Can Handle It Mantra,"Teach your child to say, 'I can handle this' when fear shows up.",5,57,all,1

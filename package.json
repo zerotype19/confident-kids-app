@@ -11,7 +11,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
     "deploy": "wrangler deploy",
-    "seed": "node config/seed.js"
+    "seed": "node scripts/seed-d1.js",
+    "migrate": "wrangler d1 migrations apply confident-kids-db"
   },
   "keywords": [
     "confidence",
@@ -37,6 +38,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250320.0",
     "buffer": "^6.0.3",
     "concurrently": "^8.0.1",
     "crypto-browserify": "^3.12.1",

@@ -76,6 +76,8 @@ const router = {
     const path = url.pathname;
     const method = request.method;
     
+    console.log(`Handling ${method} request for path: ${path}`);
+    
     // Handle OPTIONS requests for CORS
     if (method === 'OPTIONS') {
       return new Response(null, {
@@ -93,10 +95,14 @@ const router = {
       return routeMatch.route.handler(request, env, ctx);
     }
     
-    // Default 404 response
-    return new Response('Not Found', { 
+    // Return JSON for 404 instead of plain text
+    return new Response(JSON.stringify({ 
+      error: 'Not Found', 
+      path: path, 
+      method: method 
+    }), { 
       status: 404,
-      headers: corsHeaders
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 };
@@ -2034,7 +2040,6 @@ router.get('/api/content/techniques/:pillarId', async (request, env) => {
       SELECT c.id, c.title, c.description, c.content_type, c.content_data, c.age_group
       FROM content c
       WHERE c.pillar_id = ? AND c.content_type = 'technique'
-      ORDER BY c.order ASC
     `).bind(pillarId).all();
 
     // Format the response

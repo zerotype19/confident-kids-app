@@ -16,16 +16,30 @@ async function readCSV() {
         challenges.push({
           title: row.title,
           description: row.description,
-          instructions: row.instructions,
+          instructions: row.description, // Using description as instructions since they're not in the CSV
           pillar_id: parseInt(row.pillar_id),
-          difficulty_level: row.difficulty_level || 'medium',
+          difficulty_level: getDifficultyLevel(parseInt(row.difficulty_level)),
           age_group: row.age_group || 'all',
-          points_value: parseInt(row.points_value) || 10
+          points_value: 10 // Default points value
         });
       })
       .on('end', () => resolve(challenges))
       .on('error', reject);
   });
+}
+
+// Helper function to convert numeric difficulty to text
+function getDifficultyLevel(level) {
+  switch (level) {
+    case 1:
+      return 'easy';
+    case 2:
+      return 'medium';
+    case 3:
+      return 'hard';
+    default:
+      return 'medium';
+  }
 }
 
 // Function to upload challenges to API
@@ -39,6 +53,12 @@ async function uploadChallenges(challenges, authToken) {
       },
       body: JSON.stringify(challenges)
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`API returned ${response.status}: ${errorText}`);
+    }
 
     const result = await response.json();
     console.log('Upload result:', result);
