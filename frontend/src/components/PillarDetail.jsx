@@ -25,7 +25,7 @@ const PillarDetail = () => {
   }, [user]);
 
   useEffect(() => {
-    const fetchPillarData = async () => {
+    const fetchData = async () => {
       if (!user || !selectedChild) {
         console.log('Missing user or selectedChild:', { user, selectedChild });
         return;
@@ -35,19 +35,30 @@ const PillarDetail = () => {
         setLoading(true);
         setError('');
         const token = localStorage.getItem('authToken');
-        console.log('Fetching pillar data with token:', token ? 'Token exists' : 'No token');
+        console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
         
         if (!token) {
           throw new Error('No authentication token found');
         }
         
-        // Fetch pillar data
-        const pillarResponse = await fetch(`${API_URL}/api/pillars/${pillarId}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        // Fetch pillar data and challenges in parallel
+        const [pillarResponse, challengesResponse] = await Promise.all([
+          fetch(`${API_URL}/api/pillars/${pillarId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }),
+          fetch(
+            `${API_URL}/api/pillars/${pillarId}/challenges?childId=${selectedChild}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            }
+          )
+        ]);
 
         if (!pillarResponse.ok) {
           const pillarData = await pillarResponse.json();
@@ -55,9 +66,21 @@ const PillarDetail = () => {
           throw new Error(pillarData.message || 'Failed to fetch pillar data');
         }
 
-        const pillarData = await pillarResponse.json();
+        if (!challengesResponse.ok) {
+          const challengesData = await challengesResponse.json();
+          throw new Error(challengesData.message || 'Failed to fetch challenges');
+        }
+
+        const [pillarData, challengesData] = await Promise.all([
+          pillarResponse.json(),
+          challengesResponse.json()
+        ]);
+
         console.log('Pillar data:', pillarData);
+        console.log('Challenges data:', challengesData);
+
         setPillar(pillarData);
+        setChallenges(challengesData.challenges || []);
       } catch (error) {
         console.error('Error fetching data:', error);
         setError(error.message || 'Failed to load data. Please try again later.');
@@ -66,51 +89,8 @@ const PillarDetail = () => {
       }
     };
 
-    fetchPillarData();
+    fetchData();
   }, [pillarId, user, selectedChild]);
-
-  // Separate useEffect for fetching challenges when child is selected
-  useEffect(() => {
-    const fetchChallenges = async () => {
-      if (!selectedChild || !user) return;
-
-      try {
-        setLoading(true);
-        setError('');
-        const token = localStorage.getItem('authToken');
-
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        // Fetch challenges for the pillar
-        const challengesResponse = await fetch(
-          `${API_URL}/api/pillars/${pillarId}/challenges?childId=${selectedChild}`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!challengesResponse.ok) {
-          const challengesData = await challengesResponse.json();
-          throw new Error(challengesData.message || 'Failed to fetch challenges');
-        }
-
-        const challengesData = await challengesResponse.json();
-        setChallenges(challengesData.challenges || []);
-      } catch (error) {
-        console.error('Error fetching challenges:', error);
-        setError(error.message || 'Failed to load challenges. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchChallenges();
-  }, [pillarId, selectedChild, user]);
 
   const handleChildChange = (e) => {
     setSelectedChild(e.target.value);

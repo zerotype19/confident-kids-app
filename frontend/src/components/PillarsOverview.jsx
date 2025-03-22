@@ -20,13 +20,29 @@ const PillarsOverview = () => {
     if (user && user.children && user.children.length > 0 && !selectedChild) {
       console.log('Setting initial selected child:', user.children[0].id);
       setSelectedChild(user.children[0].id);
+    } else if (user && (!user.children || user.children.length === 0)) {
+      console.log('User has no children');
+      setComponentLoading(false);
     }
   }, [user, selectedChild]);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || !selectedChild) {
-        console.log('Missing user or selectedChild:', { user, selectedChild });
+      if (!user) {
+        console.log('No user found');
+        setComponentLoading(false);
+        return;
+      }
+
+      if (!user.children || user.children.length === 0) {
+        console.log('User has no children');
+        setComponentLoading(false);
+        return;
+      }
+
+      if (!selectedChild) {
+        console.log('No child selected');
+        setComponentLoading(false);
         return;
       }
 
@@ -35,6 +51,10 @@ const PillarsOverview = () => {
         const token = localStorage.getItem('authToken');
         console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
         console.log('Selected child:', selectedChild);
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
         
         // Fetch pillars with child progress
         const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild}`, {
