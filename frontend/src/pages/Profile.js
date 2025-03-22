@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useContext } from 'react';
-import AuthContext from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Profile = () => {
-  const { user, updateProfile, addChild } = useContext(AuthContext);
+  const { currentUser, updateProfile, addChild } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: ''
@@ -19,13 +18,13 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
 
   useEffect(() => {
-    if (user) {
+    if (currentUser) {
       setFormData({
-        name: user.name || '',
-        email: user.email || ''
+        name: currentUser.name || '',
+        email: currentUser.email || ''
       });
     }
-  }, [user]);
+  }, [currentUser]);
 
   const { name, email } = formData;
   const { name: childName, ageGroup, age } = childFormData;
@@ -43,11 +42,12 @@ const Profile = () => {
     setMessage('');
     setError('');
 
-    const success = await updateProfile(formData);
-    if (success) {
+    try {
+      await updateProfile(formData);
       setMessage('Profile updated successfully');
-    } else {
+    } catch (err) {
       setError('Failed to update profile');
+      console.error('Profile update error:', err);
     }
   };
 
@@ -61,20 +61,21 @@ const Profile = () => {
       return;
     }
 
-    const success = await addChild(childFormData);
-    if (success) {
+    try {
+      await addChild(childFormData);
       setMessage('Child added successfully');
       setChildFormData({
         name: '',
         ageGroup: 'toddler',
         age: ''
       });
-    } else {
+    } catch (err) {
       setError('Failed to add child');
+      console.error('Add child error:', err);
     }
   };
 
-  if (!user) {
+  if (!currentUser) {
     return <div className="loader">Loading...</div>;
   }
 
@@ -142,9 +143,9 @@ const Profile = () => {
             <div className="children-tab">
               <h2>Your Children</h2>
               
-              {user.children && user.children.length > 0 ? (
+              {currentUser.children && currentUser.children.length > 0 ? (
                 <div className="children-list">
-                  {user.children.map((child, index) => (
+                  {currentUser.children.map((child, index) => (
                     <div key={index} className="child-card">
                       <h3>{child.name}</h3>
                       <p>Age: {child.age}</p>

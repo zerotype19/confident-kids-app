@@ -31,11 +31,16 @@ const PillarsOverview = () => {
         const token = localStorage.getItem('authToken');
         
         // Fetch pillars with child progress
-        const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild}`, {
+        const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
+        
+        if (!pillarsResponse.ok) {
+          const errorData = await pillarsResponse.json();
+          throw new Error(errorData.error || 'Failed to fetch pillars data');
+        }
         
         // Fetch content (techniques)
         const contentResponse = await fetch(`${API_URL}/api/content`, {
@@ -45,14 +50,14 @@ const PillarsOverview = () => {
         });
         
         // Fetch challenges
-        const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${selectedChild}`, {
+        const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${selectedChild.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
         
         // Fetch achievements
-        const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${selectedChild}`, {
+        const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${selectedChild.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -71,7 +76,7 @@ const PillarsOverview = () => {
         setAchievements(achievementsData);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setError('Failed to load data. Please try again later.');
+        setError(error.message || 'Failed to load data. Please try again later.');
       } finally {
         setLoading(false);
       }

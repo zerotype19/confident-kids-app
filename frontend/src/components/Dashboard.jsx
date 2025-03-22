@@ -12,22 +12,35 @@ const Dashboard = () => {
   const isPremium = hasPremiumAccess();
 
   useEffect(() => {
-    // Set the first child as selected by default if user has children
-    if (currentUser?.children?.length > 0 && !selectedChild) {
-      setSelectedChild(currentUser.children[0].id);
-    }
+    console.log('Dashboard: currentUser changed', currentUser);
   }, [currentUser]);
 
   useEffect(() => {
+    // Set the first child as selected by default if user has children
+    if (currentUser?.children?.length > 0 && !selectedChild) {
+      console.log('Dashboard: Setting initial child', currentUser.children[0]);
+      setSelectedChild(currentUser.children[0].id);
+    }
+  }, [currentUser, selectedChild]);
+
+  useEffect(() => {
+    let mounted = true;
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('authToken');
         
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+        
         // Only include childId in the URL if a child is selected
         const url = selectedChild 
           ? `${process.env.REACT_APP_API_URL}/api/dashboard?childId=${selectedChild}`
           : `${process.env.REACT_APP_API_URL}/api/dashboard`;
+        
+        console.log('Dashboard: Fetching data for child:', selectedChild || 'no child selected');
         
         const response = await fetch(url, {
           method: 'GET',
@@ -37,21 +50,40 @@ const Dashboard = () => {
         });
 
         const data = await response.json();
+        console.log('Dashboard: Received data:', data);
 
         if (!response.ok) {
           throw new Error(data.message || 'Failed to fetch dashboard data');
         }
 
-        setDashboardData(data);
+        if (mounted) {
+          setDashboardData(data);
+          // Log the daily challenge status
+          if (data.todayChallenge) {
+            console.log('Daily challenge status:', {
+              childId: selectedChild,
+              challengeId: data.todayChallenge.id,
+              completed: data.todayChallenge.completed
+            });
+          }
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        setError('Failed to load dashboard data. Please try again later.');
+        if (mounted) {
+          setError(`Failed to load dashboard data${selectedChild ? ` for selected child` : ''}. Please try again later.`);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchDashboardData();
+
+    return () => {
+      mounted = false;
+    };
   }, [selectedChild]);
 
   const handleChildChange = (e) => {
@@ -68,6 +100,26 @@ const Dashboard = () => {
 
   if (!dashboardData) {
     return <div className="text-center p-5">No dashboard data available.</div>;
+  }
+
+  // If we have dashboard data but no currentUser, show a basic view
+  if (!currentUser) {
+    return (
+      <div className="container mt-4">
+        <div className="dashboard-welcome">
+          <h1>Welcome!</h1>
+          <p>Track your child's confidence journey and explore activities designed to build their confidence.</p>
+        </div>
+        
+        <div className="alert alert-info mt-4">
+          <h4>Let's Get Started!</h4>
+          <p>Add your child's profile to begin their confidence journey.</p>
+          <Link to="/profile" className="btn btn-primary mt-2">
+            Add Child Profile
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -122,9 +174,19 @@ const Dashboard = () => {
                 <div className="challenge-container">
                   <h3 className="challenge-title">{dashboardData.todayChallenge.title}</h3>
                   <p className="challenge-description">{dashboardData.todayChallenge.description}</p>
-                  <Link to={`/challenges/${dashboardData.todayChallenge.id}`} className="btn btn-primary mt-3">
-                    Start Challenge
-                  </Link>
+                  {dashboardData.todayChallenge.completed ? (
+                    <div className="completed-message">
+                      <span className="completed-badge">Completed</span>
+                      <p>Great job! Come back tomorrow for a new challenge.</p>
+                      <Link to="/challenges" className="btn btn-secondary mt-3">
+                        View All Challenges
+                      </Link>
+                    </div>
+                  ) : (
+                    <Link to={`/challenges/${dashboardData.todayChallenge.id}`} className="btn btn-primary mt-3">
+                      Start Challenge
+                    </Link>
+                  )}
                 </div>
               </div>
               

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaCog, FaBell, FaLock, FaCreditCard } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/Profile.css';
 
 const Profile = () => {
@@ -7,12 +8,17 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const { currentUser, updateProfile } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user`, {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -23,8 +29,9 @@ const Profile = () => {
         }
 
         const data = await response.json();
-        setProfile(data);
+        setProfile(data.user || data);
       } catch (err) {
+        console.error('Error fetching profile:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -37,8 +44,12 @@ const Profile = () => {
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user`, {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/update`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -52,8 +63,12 @@ const Profile = () => {
       }
 
       const updatedProfile = await response.json();
-      setProfile(updatedProfile);
+      setProfile(updatedProfile.user || updatedProfile);
+      
+      // Update the user in AuthContext
+      await updateProfile(updatedProfile.user || updatedProfile);
     } catch (err) {
+      console.error('Error updating profile:', err);
       setError(err.message);
     }
   };

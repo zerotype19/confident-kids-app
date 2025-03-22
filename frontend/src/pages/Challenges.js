@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useContext } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/main.css';
 import '../styles/DailyChallenge.css';
 import '../styles/ChallengeCard.css';
 
 const Challenges = () => {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
   const [activeChild, setActiveChild] = useState(null);
   const [activeTab, setActiveTab] = useState('daily');
-  const [dailyChallenge, setDailyChallenge] = useState({
-    title: 'Ask, Don\'t Tell Challenge',
-    description: 'When your child asks for help today, respond with a question that helps them solve the problem themselves.',
-    completed: false
-  });
+  const [dailyChallenge, setDailyChallenge] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [calendarChallenges, setCalendarChallenges] = useState([
     {
       day: 1,
@@ -198,22 +195,86 @@ const Challenges = () => {
   ]);
 
   useEffect(() => {
-    if (user && user.children && user.children.length > 0) {
-      setActiveChild(user.children[0]);
+    if (currentUser && currentUser.children && currentUser.children.length > 0) {
+      setActiveChild(currentUser.children[0]);
     }
-  }, [user]);
+  }, [currentUser]);
+
+  useEffect(() => {
+    const fetchDailyChallenge = async () => {
+      if (!activeChild) {
+        console.log('No active child selected, skipping daily challenge fetch');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('authToken');
+        console.log('Fetching daily challenge for child:', activeChild.id);
+        
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/challenges/daily?childId=${activeChild.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch daily challenge: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Received daily challenge data:', data);
+        setDailyChallenge(data);
+      } catch (err) {
+        console.error('Error fetching daily challenge:', err);
+        setError(`Failed to load daily challenge for ${activeChild.name}. Please try again later.`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDailyChallenge();
+  }, [activeChild]);
 
   const handleChildChange = (e) => {
     const childId = e.target.value;
-    const selected = user.children.find(child => child.id === childId);
+    const selected = currentUser.children.find(child => child.id === childId);
     setActiveChild(selected);
   };
 
-  const handleCompleteChallenge = () => {
-    setDailyChallenge({
-      ...dailyChallenge,
-      completed: true
-    });
+  const handleCompleteChallenge = async () => {
+    if (!activeChild || !dailyChallenge) {
+      setError('No active child or challenge selected');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      console.log('Marking challenge as complete for child:', activeChild.id);
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/challenges/${dailyChallenge.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          childId: activeChild.id,
+          completed: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to mark challenge as complete: ${response.statusText}`);
+      }
+
+      const updatedChallenge = await response.json();
+      console.log('Challenge completion response:', updatedChallenge);
+      setDailyChallenge(updatedChallenge);
+    } catch (err) {
+      console.error('Error completing challenge:', err);
+      setError(`Failed to mark challenge as complete for ${activeChild.name}. Please try again later.`);
+    }
   };
 
   const handleCalendarChallengeToggle = (day) => {
@@ -226,54 +287,62 @@ const Challenges = () => {
     );
   };
 
+  if (!currentUser) {
+    return <div className="loader">Loading...</div>;
+  }
+
+  if (loading) {
+    return <div className="loader">Loading challenges...</div>;
+  }
+
+  if (error) {
+    return <div className="error">{error}</div>;
+  }
+
   return (
-    <div className="challenges-page">
-      <div className="container">
-        <h1>Confidence Challenges</h1>
-        
-        {user && user.children && user.children.length > 0 ? (
-          <div className="child-selector">
-            <label htmlFor="childSelect">Select Child: </label>
-            <select 
-              id="childSelect" 
-              onChange={handleChildChange}
-              value={activeChild?.id}
+    <div className="container">
+      <h1>Confidence Challenges</h1>
+
+      {currentUser.children && currentUser.children.length > 0 && (
+        <div className="child-selector">
+          <label htmlFor="childSelect">Select Child:</label>
+          <select 
+            id="childSelect" 
+            value={activeChild?.id || ''} 
+            onChange={handleChildChange}
+          >
+            {currentUser.children.map(child => (
+              <option key={child.id} value={child.id}>
+                {child.name} ({child.age} years)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {activeChild && (
+        <>
+          <div className="challenges-tabs">
+            <button 
+              className={activeTab === 'daily' ? 'active' : ''} 
+              onClick={() => setActiveTab('daily')}
             >
-              {user.children.map(child => (
-                <option key={child.id} value={child.id}>
-                  {child.name} ({child.age} years)
-                </option>
-              ))}
-            </select>
+              Today's Challenge
+            </button>
+            <button 
+              className={activeTab === 'calendar' ? 'active' : ''} 
+              onClick={() => setActiveTab('calendar')}
+            >
+              30-Day Calendar
+            </button>
           </div>
-        ) : (
-          <div className="no-children-message">
-            <p>You haven't added any children to your profile yet.</p>
-          </div>
-        )}
-        
-        {activeChild && (
-          <>
-            <div className="challenges-tabs">
-              <button 
-                className={activeTab === 'daily' ? 'active' : ''} 
-                onClick={() => setActiveTab('daily')}
-              >
-                Today's Challenge
-              </button>
-              <button 
-                className={activeTab === 'calendar' ? 'active' : ''} 
-                onClick={() => setActiveTab('calendar')}
-              >
-                30-Day Calendar
-              </button>
-            </div>
-            
-            <div className="challenges-content">
-              {activeTab === 'daily' && (
-                <div className="daily-challenge-tab">
-                  <div className="dashboard-section">
-                    <h2>Today's Challenge for {activeChild.name}</h2>
+          
+          <div className="challenges-content">
+            {activeTab === 'daily' && (
+              <div className="daily-challenge-tab">
+                <div className="dashboard-section">
+                  <h2>Today's Challenge for {activeChild.name}</h2>
+                  {dailyChallenge ? (
                     <div className="challenge-card">
                       <h3>{dailyChallenge.title}</h3>
                       <p>{dailyChallenge.description}</p>
@@ -291,70 +360,74 @@ const Challenges = () => {
                         </button>
                       )}
                     </div>
-                    
-                    <div className="challenge-tips">
-                      <h3>Tips for Success</h3>
-                      <ul>
-                        <li>Try to complete the challenge early in the day</li>
-                        <li>Explain to your child what you're doing and why</li>
-                        <li>Take notes on what worked and what didn't</li>
-                        <li>Be consistent with daily challenges for best results</li>
-                      </ul>
+                  ) : (
+                    <div className="no-challenge">
+                      <p>No daily challenge available at the moment.</p>
                     </div>
+                  )}
+                  
+                  <div className="challenge-tips">
+                    <h3>Tips for Success</h3>
+                    <ul>
+                      <li>Try to complete the challenge early in the day</li>
+                      <li>Explain to your child what you're doing and why</li>
+                      <li>Take notes on what worked and what didn't</li>
+                      <li>Be consistent with daily challenges for best results</li>
+                    </ul>
                   </div>
                 </div>
-              )}
-              
-              {activeTab === 'calendar' && (
-                <div className="calendar-challenge-tab">
-                  <div className="dashboard-section">
-                    <h2>30-Day Confidence Challenge Calendar</h2>
-                    <p>Complete one challenge each day to build your child's confidence systematically.</p>
-                    
-                    <div className="challenge-progress">
-                      <p>
-                        <strong>Progress: </strong>
-                        {calendarChallenges.filter(c => c.completed).length} / 30 challenges completed
-                      </p>
-                      <div className="progress-bar">
-                        <div 
-                          className="progress-fill" 
-                          style={{ 
-                            width: `${(calendarChallenges.filter(c => c.completed).length / 30) * 100}%` 
-                          }}
-                        ></div>
-                      </div>
+              </div>
+            )}
+            
+            {activeTab === 'calendar' && (
+              <div className="calendar-challenge-tab">
+                <div className="dashboard-section">
+                  <h2>30-Day Confidence Challenge Calendar</h2>
+                  <p>Complete one challenge each day to build your child's confidence systematically.</p>
+                  
+                  <div className="challenge-progress">
+                    <p>
+                      <strong>Progress: </strong>
+                      {calendarChallenges.filter(c => c.completed).length} / 30 challenges completed
+                    </p>
+                    <div className="progress-bar">
+                      <div 
+                        className="progress-fill" 
+                        style={{ 
+                          width: `${(calendarChallenges.filter(c => c.completed).length / 30) * 100}%` 
+                        }}
+                      ></div>
                     </div>
-                    
-                    <div className="calendar-challenges">
-                      {calendarChallenges.map(challenge => (
-                        <div 
-                          key={challenge.day} 
-                          className={`calendar-day ${challenge.completed ? 'completed' : ''}`}
-                        >
-                          <div className="day-number">Day {challenge.day}</div>
-                          <div className="day-content">
-                            <h3>{challenge.title}</h3>
-                            <p>{challenge.description}</p>
-                          </div>
-                          <div className="day-action">
-                            <button 
-                              className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'}`}
-                              onClick={() => handleCalendarChallengeToggle(challenge.day)}
-                            >
-                              {challenge.completed ? 'Completed' : 'Mark Complete'}
-                            </button>
-                          </div>
+                  </div>
+                  
+                  <div className="calendar-challenges">
+                    {calendarChallenges.map(challenge => (
+                      <div 
+                        key={challenge.day} 
+                        className={`calendar-day ${challenge.completed ? 'completed' : ''}`}
+                      >
+                        <div className="day-number">Day {challenge.day}</div>
+                        <div className="day-content">
+                          <h3>{challenge.title}</h3>
+                          <p>{challenge.description}</p>
                         </div>
-                      ))}
-                    </div>
+                        <div className="day-action">
+                          <button 
+                            className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'}`}
+                            onClick={() => handleCalendarChallengeToggle(challenge.day)}
+                          >
+                            {challenge.completed ? 'Completed' : 'Mark Complete'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

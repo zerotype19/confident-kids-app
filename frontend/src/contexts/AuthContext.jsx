@@ -153,16 +153,16 @@ export function AuthProvider({ children }) {
         throw new Error(data.message || 'Failed to fetch user profile');
       }
 
-      setCurrentUser(data.user || data); // Handle both {user: {...}} and direct user object
+      const userData = data.user || data;
+      setCurrentUser(userData);
       setIsAuthenticated(true);
-      return data.user || data;
+      return userData;
     } catch (error) {
       console.error('Error fetching current user:', error);
+      localStorage.removeItem('authToken');
       setCurrentUser(null);
       setIsAuthenticated(false);
       return null;
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -246,16 +246,34 @@ export function AuthProvider({ children }) {
 
   // Effect to fetch the current user when the component mounts
   useEffect(() => {
+    let mounted = true;
+
     async function loadUserData() {
       console.log('Loading user data on mount');
-      const user = await fetchCurrentUser();
-      if (user) {
-        console.log('User found, fetching subscription status');
-        await fetchSubscriptionStatus();
+      try {
+        const user = await fetchCurrentUser();
+        if (user && mounted) {
+          console.log('User found, fetching subscription status');
+          await fetchSubscriptionStatus();
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        if (mounted) {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
     
     loadUserData();
+
+    return () => {
+      mounted = false;
+    };
   }, []); // Empty dependency array is fine for initial load
 
   // Create the value object that will be provided to consumers
@@ -263,7 +281,7 @@ export function AuthProvider({ children }) {
     currentUser,
     user: currentUser, // Add alias for compatibility
     userSubscription,
-    isAuthenticated, // Add this for compatibility
+    isAuthenticated,
     loading,
     error,
     register,
@@ -284,7 +302,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
