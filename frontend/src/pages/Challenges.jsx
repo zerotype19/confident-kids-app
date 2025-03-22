@@ -183,7 +183,8 @@ const Challenges = () => {
         },
         body: JSON.stringify({
           childId: activeChild,
-          completed: true
+          completed: true,
+          userId: currentUser.id
         })
       });
 
