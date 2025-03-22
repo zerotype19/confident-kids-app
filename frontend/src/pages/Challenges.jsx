@@ -182,7 +182,7 @@ const Challenges = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          childId: activeChild.id,
+          childId: activeChild,
           completed: !challenge.completed
         })
       });
@@ -199,7 +199,7 @@ const Challenges = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          childId: activeChild.id,
+          childId: activeChild,
           activityId: challenge.id,
           activityType: 'challenge',
           completed: !challenge.completed
@@ -220,7 +220,7 @@ const Challenges = () => {
       );
 
       // Refresh the progress tracking data
-      const progressDataResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild.id}`, {
+      const progressDataResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
