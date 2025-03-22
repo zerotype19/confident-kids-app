@@ -19,7 +19,9 @@ const Challenges = () => {
   const [challenges, setChallenges] = useState({
     completed: 0,
     total: 0,
-    streak: 0
+    streak: 0,
+    currentMonth: new Date().getMonth() + 1,
+    currentYear: new Date().getFullYear()
   });
 
   useEffect(() => {
@@ -41,8 +43,13 @@ const Challenges = () => {
           throw new Error('No authentication token found');
         }
 
+        // Get current month and year
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+
         // Fetch daily challenge
-        const dailyResponse = await fetch(`${API_URL}/api/challenges/daily?childId=${activeChild}`, {
+        const dailyResponse = await fetch(`${API_URL}/api/challenges/daily?childId=${activeChild}&month=${currentMonth}&year=${currentYear}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -56,7 +63,7 @@ const Challenges = () => {
         setDailyChallenge(dailyData.challenge);
 
         // Fetch weekly challenges
-        const weeklyResponse = await fetch(`${API_URL}/api/challenges/weekly?childId=${activeChild}`, {
+        const weeklyResponse = await fetch(`${API_URL}/api/challenges/weekly?childId=${activeChild}&month=${currentMonth}&year=${currentYear}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -69,8 +76,8 @@ const Challenges = () => {
         const weeklyData = await weeklyResponse.json();
         setWeeklyChallenges(weeklyData.challenges);
 
-        // Fetch completed challenges
-        const completedResponse = await fetch(`${API_URL}/api/challenges/completed?childId=${activeChild}`, {
+        // Fetch completed challenges for current month
+        const completedResponse = await fetch(`${API_URL}/api/challenges/completed?childId=${activeChild}&month=${currentMonth}&year=${currentYear}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -82,7 +89,7 @@ const Challenges = () => {
         }
 
         // Fetch calendar challenges
-        const calendarResponse = await fetch(`${API_URL}/api/challenges/calendar?childId=${activeChild}`, {
+        const calendarResponse = await fetch(`${API_URL}/api/challenges/calendar?childId=${activeChild}&month=${currentMonth}&year=${currentYear}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -93,8 +100,8 @@ const Challenges = () => {
           setCalendarChallenges(calendarData.challenges);
         }
 
-        // Fetch progress tracking data
-        const progressResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild}`, {
+        // Fetch progress tracking data for current month
+        const progressResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild}&month=${currentMonth}&year=${currentYear}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -105,7 +112,9 @@ const Challenges = () => {
           setChallenges({
             completed: progressData.completedChallenges,
             total: progressData.totalChallenges,
-            streak: progressData.streak || 0
+            streak: progressData.streak || 0,
+            currentMonth,
+            currentYear
           });
         }
       } catch (err) {
@@ -174,7 +183,12 @@ const Challenges = () => {
       const token = localStorage.getItem('authToken');
       const challenge = calendarChallenges.find(c => c.day === day);
       
-      // First, mark the challenge as complete
+      // Get current month and year
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      // Mark the challenge as complete
       const response = await fetch(`${API_URL}/api/challenges/${challenge.id}/complete`, {
         method: 'POST',
         headers: {
@@ -183,8 +197,7 @@ const Challenges = () => {
         },
         body: JSON.stringify({
           childId: activeChild,
-          completed: true,
-          userId: currentUser.id
+          completed: true
         })
       });
 
@@ -201,8 +214,8 @@ const Challenges = () => {
         )
       );
 
-      // Refresh the progress tracking data
-      const progressDataResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild}`, {
+      // Refresh the progress tracking data for current month
+      const progressDataResponse = await fetch(`${API_URL}/api/progress?childId=${activeChild}&month=${currentMonth}&year=${currentYear}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -213,7 +226,9 @@ const Challenges = () => {
         setChallenges({
           completed: progressData.completedChallenges,
           total: progressData.totalChallenges,
-          streak: progressData.streak || 0
+          streak: progressData.streak || 0,
+          currentMonth,
+          currentYear
         });
       }
     } catch (err) {
@@ -264,6 +279,10 @@ const Challenges = () => {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="month-selector mb-4">
+        <h3>Progress for {new Date(challenges.currentYear, challenges.currentMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
       </div>
 
       <div className="challenges-tabs">

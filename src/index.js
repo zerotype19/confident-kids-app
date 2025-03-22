@@ -1342,29 +1342,34 @@ router.post('/api/challenges/:id/complete', async (request, env) => {
       });
     }
 
-    // Check if completion record exists
+    // Get current month and year
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // getMonth() returns 0-11
+    const currentYear = now.getFullYear();
+
+    // Check if completion record exists for this month
     const existingCompletion = await env.DB.prepare(
-      'SELECT * FROM challenge_completions WHERE challenge_id = ? AND child_id = ?'
-    ).bind(id, childId).first();
+      'SELECT * FROM challenge_completions WHERE challenge_id = ? AND child_id = ? AND month = ? AND year = ?'
+    ).bind(id, childId, currentMonth, currentYear).first();
 
     if (existingCompletion) {
       if (completed) {
         // Update existing completion
         await env.DB.prepare(
-          'UPDATE challenge_completions SET completed_at = ? WHERE challenge_id = ? AND child_id = ?'
-        ).bind(new Date().toISOString(), id, childId).run();
+          'UPDATE challenge_completions SET completed_at = ? WHERE challenge_id = ? AND child_id = ? AND month = ? AND year = ?'
+        ).bind(Date.now(), id, childId, currentMonth, currentYear).run();
       } else {
         // Delete the completion record
         await env.DB.prepare(
-          'DELETE FROM challenge_completions WHERE challenge_id = ? AND child_id = ?'
-        ).bind(id, childId).run();
+          'DELETE FROM challenge_completions WHERE challenge_id = ? AND child_id = ? AND month = ? AND year = ?'
+        ).bind(id, childId, currentMonth, currentYear).run();
       }
     } else if (completed) {
       // Create new completion record
-      const completionId = `cc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const completionId = crypto.randomUUID();
       await env.DB.prepare(
-        'INSERT INTO challenge_completions (id, challenge_id, child_id, user_id, completed_at) VALUES (?, ?, ?, ?, ?)'
-      ).bind(completionId, id, childId, user.id, new Date().toISOString()).run();
+        'INSERT INTO challenge_completions (id, challenge_id, child_id, user_id, completed_at, month, year) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).bind(completionId, id, childId, user.id, Date.now(), currentMonth, currentYear).run();
     }
 
     // Check and update achievements
