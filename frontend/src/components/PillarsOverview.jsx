@@ -101,33 +101,28 @@ const PillarsOverview = () => {
             'Authorization': `Bearer ${token}`,
           },
         });
-
+        
         if (!achievementsResponse.ok) {
           const errorData = await achievementsResponse.json();
           console.error('Achievements response error:', errorData);
           throw new Error(errorData.error || 'Failed to fetch achievements data');
         }
-
+        
         const [pillarsData, contentData, challengesData, achievementsData] = await Promise.all([
           pillarsResponse.json(),
           contentResponse.json(),
           challengesResponse.json(),
-          achievementsResponse.json(),
+          achievementsResponse.json()
         ]);
-
-        console.log('Pillars data:', pillarsData);
-        console.log('Content data:', contentData);
-        console.log('Challenges data:', challengesData);
-        console.log('Achievements data:', achievementsData);
-
-        // Handle the response data structure
-        setPillars(Array.isArray(pillarsData) ? pillarsData : pillarsData.pillars || []);
-        setContent(Array.isArray(contentData) ? contentData : contentData.content || []);
-        setChallenges(Array.isArray(challengesData) ? challengesData : challengesData.challenges || []);
-        setAchievements(Array.isArray(achievementsData) ? achievementsData : achievementsData.achievements || []);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError(error.message || 'Failed to load data. Please try again later.');
+        
+        setPillars(pillarsData.pillars || []);
+        setContent(contentData.content || []);
+        setChallenges(challengesData.challenges || []);
+        setAchievements(achievementsData.achievements || []);
+        setError('');
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError(err.message);
       } finally {
         setComponentLoading(false);
       }
@@ -137,23 +132,14 @@ const PillarsOverview = () => {
   }, [currentUser, selectedChild]);
 
   const handleChildChange = (e) => {
-    setSelectedChild(e.target.value);
+    const childId = e.target.value;
+    setSelectedChild(childId);
   };
 
   if (loading || componentLoading) {
     return (
       <div className="container mt-4">
-        <div className="text-center p-5">Loading pillars...</div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-warning">
-          Please log in to view pillars.
-        </div>
+        <div className="text-center p-5">Loading pillars data...</div>
       </div>
     );
   }
@@ -166,113 +152,54 @@ const PillarsOverview = () => {
     );
   }
 
+  if (!currentUser || !currentUser.children || currentUser.children.length === 0) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-warning">
+          Please add a child to your profile to view pillars and progress.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mt-4">
-      {currentUser.children && currentUser.children.length > 0 && (
-        <div className="child-selector mb-4">
-          <label htmlFor="childSelect">Select Child:</label>
-          <select 
-            id="childSelect" 
-            className="form-control" 
-            value={selectedChild || ''} 
-            onChange={handleChildChange}
-          >
-            {currentUser.children.map(child => (
-              <option key={child.id} value={child.id}>
-                {child.name} ({child.age} years)
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="child-selector mb-4">
+        <label htmlFor="childSelect">Select Child:</label>
+        <select 
+          id="childSelect" 
+          className="form-control" 
+          value={selectedChild || ''} 
+          onChange={handleChildChange}
+        >
+          {currentUser.children.map(child => (
+            <option key={child.id} value={child.id}>
+              {child.name} ({child.age} years)
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <div className="pillars-overview">
-        <div className="daily-challenge-section">
-          <h2>Today's Challenge</h2>
-          {challenges.length > 0 && (
-            <div className="daily-challenge">
-              <h3>{challenges[0].title}</h3>
-              <p>{challenges[0].description}</p>
-              <Link to={`/challenges/${challenges[0].id}`} className="btn btn-primary">
-                Start Challenge
-              </Link>
+      <div className="pillars-grid">
+        {pillars.map(pillar => (
+          <div key={pillar.id} className="pillar-card">
+            <h3>{pillar.name}</h3>
+            <div className="pillar-progress">
+              <div 
+                className="progress-bar" 
+                style={{ width: `${pillar.progress || 0}%` }}
+              ></div>
+              <span className="progress-text">{pillar.progress || 0}%</span>
             </div>
-          )}
-        </div>
-
-        <div className="pillars-grid">
-          {pillars.map(pillar => {
-            const pillarContent = content.filter(c => c.pillar_id === pillar.id);
-            const pillarChallenges = challenges.filter(c => c.pillar_id === pillar.id);
-            const pillarAchievements = achievements.filter(a => 
-              a.description.includes(pillar.name)
-            );
-
-            return (
-              <div key={pillar.id} className="pillar-card">
-                <div className="pillar-header">
-                  <h3>{pillar.name}</h3>
-                  <p className="pillar-description">{pillar.short_description}</p>
-                </div>
-
-                <div className="pillar-stats">
-                  <div className="stat">
-                    <FaStar className="icon" />
-                    <span>{pillarContent.length} Techniques</span>
-                  </div>
-                  <div className="stat">
-                    <FaCalendarAlt className="icon" />
-                    <span>{pillarChallenges.length} Challenges</span>
-                  </div>
-                  <div className="stat">
-                    <FaTrophy className="icon" />
-                    <span>{pillarAchievements.length} Achievements</span>
-                  </div>
-                </div>
-
-                <div className="pillar-progress">
-                  <div className="progress-label">
-                    <span>Progress</span>
-                    <span>{pillar.progress || 0}%</span>
-                  </div>
-                  <div className="progress-container">
-                    <div 
-                      className="progress-bar" 
-                      style={{ width: `${pillar.progress || 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="pillar-actions">
-                  <Link to={`/pillars/${pillar.id}`} className="btn btn-primary">
-                    Explore Pillar
-                  </Link>
-                  <Link to={`/pillars/${pillar.id}/techniques`} className="btn btn-secondary">
-                    View Techniques
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="achievements-section">
-          <h2>Available Achievements</h2>
-          <div className="achievements-grid">
-            {achievements.map(achievement => (
-              <div key={achievement.id} className="achievement-card">
-                <div className="achievement-header">
-                  <h3>{achievement.name}</h3>
-                  <span className="points">{achievement.points_value} points</span>
-                </div>
-                <p>{achievement.description}</p>
-                {achievement.creates_certificate && (
-                  <span className="certificate-badge">Certificate Available</span>
-                )}
-              </div>
-            ))}
+            <p>{pillar.description}</p>
+            <Link 
+              to={`/pillars/${pillar.id}`} 
+              className="btn btn-primary"
+            >
+              View Details
+            </Link>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
