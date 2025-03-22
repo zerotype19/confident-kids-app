@@ -277,14 +277,44 @@ const Challenges = () => {
     }
   };
 
-  const handleCalendarChallengeToggle = (day) => {
-    setCalendarChallenges(
-      calendarChallenges.map(challenge => 
-        challenge.day === day 
-          ? { ...challenge, completed: !challenge.completed } 
-          : challenge
-      )
-    );
+  const handleCalendarChallengeToggle = async (day) => {
+    if (!activeChild) {
+      setError('No active child selected');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const challenge = calendarChallenges.find(c => c.day === day);
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/challenges/${challenge.id}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          childId: activeChild.id,
+          completed: !challenge.completed
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update challenge status: ${response.statusText}`);
+      }
+
+      // Update local state after successful API call
+      setCalendarChallenges(
+        calendarChallenges.map(challenge => 
+          challenge.day === day 
+            ? { ...challenge, completed: !challenge.completed } 
+            : challenge
+        )
+      );
+    } catch (err) {
+      console.error('Error updating challenge status:', err);
+      setError(`Failed to update challenge status. Please try again later.`);
+    }
   };
 
   if (!currentUser) {
@@ -300,43 +330,27 @@ const Challenges = () => {
   }
 
   return (
-    <div className="container">
-      <h1>Confidence Challenges</h1>
-
-      {currentUser.children && currentUser.children.length > 0 && (
-        <div className="child-selector">
-          <label htmlFor="childSelect">Select Child:</label>
-          <select 
-            id="childSelect" 
-            value={activeChild?.id || ''} 
-            onChange={handleChildChange}
-          >
-            {currentUser.children.map(child => (
-              <option key={child.id} value={child.id}>
-                {child.name} ({child.age} years)
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
+    <div className="challenges-page">
       {activeChild && (
         <>
-          <div className="challenges-tabs">
-            <button 
-              className={activeTab === 'daily' ? 'active' : ''} 
-              onClick={() => setActiveTab('daily')}
-            >
-              Today's Challenge
-            </button>
-            <button 
-              className={activeTab === 'calendar' ? 'active' : ''} 
-              onClick={() => setActiveTab('calendar')}
-            >
-              30-Day Calendar
-            </button>
+          <div className="challenges-header">
+            <h1>Challenges for {activeChild.name}</h1>
+            <div className="challenges-tabs">
+              <button 
+                className={`tab ${activeTab === 'daily' ? 'active' : ''}`}
+                onClick={() => setActiveTab('daily')}
+              >
+                Daily Challenge
+              </button>
+              <button 
+                className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
+                onClick={() => setActiveTab('calendar')}
+              >
+                30-Day Calendar
+              </button>
+            </div>
           </div>
-          
+
           <div className="challenges-content">
             {activeTab === 'daily' && (
               <div className="daily-challenge-tab">
@@ -378,50 +392,35 @@ const Challenges = () => {
                 </div>
               </div>
             )}
-            
+
             {activeTab === 'calendar' && (
-              <div className="calendar-challenge-tab">
-                <div className="dashboard-section">
-                  <h2>30-Day Confidence Challenge Calendar</h2>
-                  <p>Complete one challenge each day to build your child's confidence systematically.</p>
-                  
-                  <div className="challenge-progress">
-                    <p>
-                      <strong>Progress: </strong>
-                      {calendarChallenges.filter(c => c.completed).length} / 30 challenges completed
-                    </p>
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{ 
-                          width: `${(calendarChallenges.filter(c => c.completed).length / 30) * 100}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  <div className="calendar-challenges">
-                    {calendarChallenges.map(challenge => (
-                      <div 
-                        key={challenge.day} 
-                        className={`calendar-day ${challenge.completed ? 'completed' : ''}`}
-                      >
-                        <div className="day-number">Day {challenge.day}</div>
-                        <div className="day-content">
-                          <h3>{challenge.title}</h3>
-                          <p>{challenge.description}</p>
-                        </div>
-                        <div className="day-action">
-                          <button 
-                            className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'}`}
-                            onClick={() => handleCalendarChallengeToggle(challenge.day)}
-                          >
-                            {challenge.completed ? 'Completed' : 'Mark Complete'}
-                          </button>
-                        </div>
+              <div className="calendar-challenges-tab">
+                <div className="calendar-header">
+                  <h2>30-Day Challenge Calendar</h2>
+                  <p>Complete one challenge each day to build lasting confidence and skills.</p>
+                </div>
+
+                <div className="calendar-challenges">
+                  {calendarChallenges.map(challenge => (
+                    <div 
+                      key={challenge.day} 
+                      className={`calendar-day ${challenge.completed ? 'completed' : ''}`}
+                    >
+                      <div className="day-number">Day {challenge.day}</div>
+                      <div className="day-content">
+                        <h3>{challenge.title}</h3>
+                        <p>{challenge.description}</p>
                       </div>
-                    ))}
-                  </div>
+                      <div className="day-action">
+                        <button 
+                          className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'}`}
+                          onClick={() => handleCalendarChallengeToggle(challenge.day)}
+                        >
+                          {challenge.completed ? 'Completed' : 'Mark Complete'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

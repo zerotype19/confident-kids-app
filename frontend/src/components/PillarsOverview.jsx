@@ -31,7 +31,7 @@ const PillarsOverview = () => {
         const token = localStorage.getItem('authToken');
         
         // Fetch pillars with child progress
-        const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild.id}`, {
+        const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -50,14 +50,14 @@ const PillarsOverview = () => {
         });
         
         // Fetch challenges
-        const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${selectedChild.id}`, {
+        const challengesResponse = await fetch(`${API_URL}/api/challenges?childId=${selectedChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
         
         // Fetch achievements
-        const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${selectedChild.id}`, {
+        const achievementsResponse = await fetch(`${API_URL}/api/achievements?childId=${selectedChild}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
