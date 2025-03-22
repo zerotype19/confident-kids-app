@@ -2062,6 +2062,79 @@ router.get('/api/content/techniques/:pillarId', async (request, env) => {
   }
 });
 
+// Bulk insert challenges endpoint
+router.post('/api/challenges/bulk', async (request, env) => {
+  try {
+    // Verify JWT token and get user
+    const user = await verifyAuth(request, env);
+    if (!user) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+        status: 401,
+        headers: corsHeaders
+      });
+    }
+
+    // Parse the request body
+    const challenges = await request.json();
+    
+    if (!Array.isArray(challenges)) {
+      return new Response(JSON.stringify({ error: 'Request body must be an array of challenges' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Prepare the insert statement
+    const stmt = env.DB.prepare(`
+      INSERT INTO challenges (
+        id, title, description, instructions, pillar_id, 
+        difficulty_level, age_group, points_value, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    // Insert each challenge
+    const results = [];
+    for (const challenge of challenges) {
+      try {
+        const id = `chal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await stmt.bind(
+          id,
+          challenge.title,
+          challenge.description,
+          challenge.instructions,
+          challenge.pillar_id,
+          challenge.difficulty_level || 'medium',
+          challenge.age_group || 'all',
+          challenge.points_value || 10,
+          Date.now()
+        ).run();
+        results.push({ id, success: true });
+      } catch (error) {
+        results.push({ 
+          challenge: challenge.title, 
+          success: false, 
+          error: error.message 
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: `Processed ${challenges.length} challenges`,
+      results
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    console.error('Error bulk inserting challenges:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
 // Export default function to handle requests
 export default {
   async fetch(request, env, ctx) {
