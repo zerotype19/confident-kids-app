@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaStar, FaClock, FaUserFriends } from 'react-icons/fa';
+import { FaStar, FaClock, FaUserFriends, FaCheck } from 'react-icons/fa';
 import '../styles/Challenges.css';
 
 const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
@@ -14,6 +14,7 @@ const Challenges = () => {
   const [weeklyChallenges, setWeeklyChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [completedChallenges, setCompletedChallenges] = useState(new Set());
 
   useEffect(() => {
     if (currentUser && currentUser.children && currentUser.children.length > 0 && !activeChild) {
@@ -61,6 +62,18 @@ const Challenges = () => {
 
         const weeklyData = await weeklyResponse.json();
         setWeeklyChallenges(weeklyData.challenges);
+
+        // Fetch completed challenges
+        const completedResponse = await fetch(`${API_URL}/api/challenges/completed?childId=${activeChild}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (completedResponse.ok) {
+          const completedData = await completedResponse.json();
+          setCompletedChallenges(new Set(completedData.completed_challenges.map(c => c.id)));
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -74,6 +87,47 @@ const Challenges = () => {
   const handleChildChange = (e) => {
     const childId = e.target.value;
     setActiveChild(childId);
+  };
+
+  const handleCompleteChallenge = async (challengeId) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`${API_URL}/api/challenges/${challengeId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ childId: activeChild }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark challenge as complete');
+      }
+
+      // Update the completed challenges set
+      setCompletedChallenges(prev => new Set([...prev, challengeId]));
+
+      // If it's the daily challenge, refresh the challenges
+      if (dailyChallenge && dailyChallenge.id === challengeId) {
+        const dailyResponse = await fetch(`${API_URL}/api/challenges/daily?childId=${activeChild}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (dailyResponse.ok) {
+          const dailyData = await dailyResponse.json();
+          setDailyChallenge(dailyData.challenge);
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   if (!currentUser) {
@@ -153,12 +207,21 @@ const Challenges = () => {
                 </span>
               </div>
               <p>{dailyChallenge.description}</p>
-              <Link 
-                to={`/challenges/${dailyChallenge.id}`} 
-                className="btn btn-primary"
-              >
-                Start Challenge
-              </Link>
+              {completedChallenges.has(dailyChallenge.id) ? (
+                <Link 
+                  to="/challenges" 
+                  className="btn btn-success"
+                >
+                  <FaCheck /> View All Challenges
+                </Link>
+              ) : (
+                <button 
+                  onClick={() => handleCompleteChallenge(dailyChallenge.id)}
+                  className="btn btn-primary"
+                >
+                  Mark as Complete
+                </button>
+              )}
             </>
           ) : (
             <div className="text-center p-5">
@@ -186,12 +249,21 @@ const Challenges = () => {
                     </span>
                   </div>
                   <p>{challenge.description}</p>
-                  <Link 
-                    to={`/challenges/${challenge.id}`} 
-                    className="btn btn-primary"
-                  >
-                    Start Challenge
-                  </Link>
+                  {completedChallenges.has(challenge.id) ? (
+                    <Link 
+                      to="/challenges" 
+                      className="btn btn-success"
+                    >
+                      <FaCheck /> View All Challenges
+                    </Link>
+                  ) : (
+                    <button 
+                      onClick={() => handleCompleteChallenge(challenge.id)}
+                      className="btn btn-primary"
+                    >
+                      Mark as Complete
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
