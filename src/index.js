@@ -465,10 +465,9 @@ router.get('/api/dashboard', async (request, env) => {
 
     // Get points earned
     const points = await env.DB.prepare(`
-      SELECT COALESCE(SUM(points), 0) as total_points
-      FROM challenge_completions cc
-      JOIN challenges c ON cc.challenge_id = c.id
-      WHERE cc.child_id = ?
+      SELECT COUNT(*) as total_points
+      FROM challenge_completions
+      WHERE child_id = ?
     `).bind(childId).first();
 
     // Get pillars with progress

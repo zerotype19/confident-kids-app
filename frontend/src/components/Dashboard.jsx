@@ -12,15 +12,17 @@ const Dashboard = () => {
   const isPremium = hasPremiumAccess();
 
   useEffect(() => {
+    // Set the first child as selected by default if user has children
+    if (currentUser?.children?.length > 0 && !selectedChild) {
+      setSelectedChild(currentUser.children[0].id);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('authToken');
-        
-        // Set the first child as selected by default if user has children
-        if (currentUser.children && currentUser.children.length > 0) {
-          setSelectedChild(currentUser.children[0].id);
-        }
         
         // Only include childId in the URL if a child is selected
         const url = selectedChild 
@@ -50,7 +52,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [currentUser, selectedChild]);
+  }, [selectedChild]);
 
   const handleChildChange = (e) => {
     setSelectedChild(e.target.value);
