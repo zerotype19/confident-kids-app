@@ -11,6 +11,7 @@ import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import PillarDetail from './components/PillarDetail';
 import PillarsOverview from './components/PillarsOverview';
+import PillarTechniques from './components/PillarTechniques';
 import Subscription from './components/Subscription';
 import Rewards from './components/Rewards';
 import Home from './components/Home';
@@ -81,6 +82,11 @@ const App = () => {
             <Route path="/pillars/:pillarId" element={
               <ProtectedRoute>
                 <PillarDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/pillars/:pillarId/techniques" element={
+              <ProtectedRoute>
+                <PillarTechniques />
               </ProtectedRoute>
             } />
             <Route path="/challenges" element={
