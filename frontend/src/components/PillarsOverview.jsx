@@ -115,10 +115,10 @@ const PillarsOverview = () => {
           achievementsResponse.json()
         ]);
         
-        setPillars(pillarsData.pillars || []);
-        setContent(contentData.content || []);
-        setChallenges(challengesData.challenges || []);
-        setAchievements(achievementsData.achievements || []);
+        setPillars(pillarsData || []);
+        setContent(contentData || []);
+        setChallenges(challengesData || []);
+        setAchievements(achievementsData || []);
         setError('');
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -191,7 +191,7 @@ const PillarsOverview = () => {
               ></div>
               <span className="progress-text">{pillar.progress || 0}%</span>
             </div>
-            <p>{pillar.description}</p>
+            <p>{pillar.short_description}</p>
             <Link 
               to={`/pillars/${pillar.id}`} 
               className="btn btn-primary"
