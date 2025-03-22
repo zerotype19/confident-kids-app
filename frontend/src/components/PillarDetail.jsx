@@ -15,13 +15,19 @@ const PillarDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedChild, setSelectedChild] = useState(null);
-  const { user, hasPremiumAccess } = useAuth();
+  const { user, loading: authLoading, hasPremiumAccess } = useAuth();
   const isPremium = hasPremiumAccess();
 
   useEffect(() => {
+    if (user && user.children && user.children.length > 0 && !selectedChild) {
+      setSelectedChild(user.children[0].id);
+    }
+  }, [user]);
+
+  useEffect(() => {
     const fetchPillarData = async () => {
-      if (!user) {
-        setLoading(false);
+      if (!user || !selectedChild) {
+        console.log('Missing user or selectedChild:', { user, selectedChild });
         return;
       }
 
@@ -29,6 +35,7 @@ const PillarDetail = () => {
         setLoading(true);
         setError('');
         const token = localStorage.getItem('authToken');
+        console.log('Fetching pillar data with token:', token ? 'Token exists' : 'No token');
         
         if (!token) {
           throw new Error('No authentication token found');
@@ -44,16 +51,13 @@ const PillarDetail = () => {
 
         if (!pillarResponse.ok) {
           const pillarData = await pillarResponse.json();
+          console.error('Pillar response error:', pillarData);
           throw new Error(pillarData.message || 'Failed to fetch pillar data');
         }
 
         const pillarData = await pillarResponse.json();
+        console.log('Pillar data:', pillarData);
         setPillar(pillarData);
-
-        // Set the first child as selected by default if user has children
-        if (user.children && user.children.length > 0 && !selectedChild) {
-          setSelectedChild(user.children[0].id);
-        }
       } catch (error) {
         console.error('Error fetching data:', error);
         setError(error.message || 'Failed to load data. Please try again later.');
@@ -120,20 +124,20 @@ const PillarDetail = () => {
     ));
   };
 
+  if (authLoading || loading) {
+    return (
+      <div className="container mt-4">
+        <div className="text-center p-5">Loading pillar data...</div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="container mt-4">
         <div className="alert alert-warning">
           Please log in to view pillar details.
         </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="container mt-4">
-        <div className="text-center p-5">Loading pillar data...</div>
       </div>
     );
   }

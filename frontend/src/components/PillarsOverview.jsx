@@ -18,9 +18,10 @@ const PillarsOverview = () => {
 
   useEffect(() => {
     if (user && user.children && user.children.length > 0 && !selectedChild) {
+      console.log('Setting initial selected child:', user.children[0].id);
       setSelectedChild(user.children[0].id);
     }
-  }, [user]);
+  }, [user, selectedChild]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,6 +34,7 @@ const PillarsOverview = () => {
         setComponentLoading(true);
         const token = localStorage.getItem('authToken');
         console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
+        console.log('Selected child:', selectedChild);
         
         // Fetch pillars with child progress
         const pillarsResponse = await fetch(`${API_URL}/api/pillars?childId=${selectedChild}`, {
