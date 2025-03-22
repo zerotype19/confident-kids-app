@@ -13,6 +13,7 @@
   font-weight: 500;
   color: var(--neutral-700);
   margin-bottom: 0;
+  white-space: nowrap;
 }
 
 .child-selector select {
@@ -35,4 +36,18 @@
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+}
+
+.child-selector .alert {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.child-selector .alert p {
+  margin-bottom: 0.5rem;
+}
+
+.child-selector .btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
 } 

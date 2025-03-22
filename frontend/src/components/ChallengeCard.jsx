@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaStar, FaClock, FaUserFriends } from 'react-icons/fa';
+import { FaStar, FaClock, FaUserFriends, FaCheck } from 'react-icons/fa';
 
-const ChallengeCard = ({ challenge, childId, pillarId, onComplete }) => {
+const ChallengeCard = ({ challenge, childId, pillarId, onComplete, isCompleted }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleComplete = async () => {
+    if (isCompleted || isSubmitting) return;
+    
     try {
+      setIsSubmitting(true);
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/challenges/${challenge.id}/complete`, {
         method: 'POST',
         headers: {
@@ -16,7 +20,7 @@ const ChallengeCard = ({ challenge, childId, pillarId, onComplete }) => {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
         },
         body: JSON.stringify({
-          childId,
+          childId: childId,
           completed: true
         }),
       });
@@ -29,6 +33,8 @@ const ChallengeCard = ({ challenge, childId, pillarId, onComplete }) => {
       setIsExpanded(false);
     } catch (error) {
       console.error('Error completing challenge:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -91,13 +97,23 @@ const ChallengeCard = ({ challenge, childId, pillarId, onComplete }) => {
               />
             </div>
 
-            <button 
-              className="btn btn-primary"
-              onClick={handleComplete}
-              disabled={rating === 0}
-            >
-              Mark as Complete
-            </button>
+            {isCompleted ? (
+              <div className="completed-state">
+                <FaCheck className="text-success" />
+                <span>Completed</span>
+                <Link to="/30-day-challenge" className="btn btn-link">
+                  View 30-Day Challenge
+                </Link>
+              </div>
+            ) : (
+              <button 
+                className="btn btn-primary"
+                onClick={handleComplete}
+                disabled={rating === 0 || isSubmitting}
+              >
+                {isSubmitting ? 'Marking Complete...' : 'Mark as Complete'}
+              </button>
+            )}
           </div>
         </div>
       )}

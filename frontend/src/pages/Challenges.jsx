@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useChild } from '../contexts/ChildContext';
 import { FaStar, FaClock, FaUserFriends, FaCheck } from 'react-icons/fa';
 import ChildSelector from '../components/ChildSelector';
+import ChallengeCard from '../components/ChallengeCard';
 import '../styles/Challenges.css';
 
 const API_URL = 'https://confident-kids-api.kevin-mcgovern.workers.dev';
@@ -248,8 +249,8 @@ const Challenges = () => {
         });
       }
     } catch (err) {
-      console.error('Error updating challenge status:', err);
-      setError(`Failed to update challenge status. Please try again later.`);
+      console.error('Error toggling calendar challenge:', err);
+      setError(err.message);
     }
   };
 
@@ -301,101 +302,66 @@ const Challenges = () => {
   }
 
   if (loading) {
-    return (
-      <div className="container mt-4">
-        <div className="text-center p-5">Loading challenges...</div>
-      </div>
-    );
+    return <div className="loader">Loading challenges...</div>;
   }
 
   if (error) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-danger">{error}</div>
-      </div>
-    );
+    return <div className="alert alert-danger">{error}</div>;
   }
 
   return (
-    <div className="container mt-4">
-      <ChildSelector />
-
+    <div className="challenges-page">
+      <div className="challenges-header">
+        <h1>30-Day Challenges</h1>
+        <ChildSelector />
+      </div>
       {activeChild ? (
         <>
-          <div className="month-selector mb-4">
-            <h3>Progress for {new Date(challenges.currentYear, challenges.currentMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+          <div className="progress-stats">
+            <div className="stat-card">
+              <h3>Completed</h3>
+              <div className="stat-number">{challenges.completed}</div>
+            </div>
+            <div className="stat-card">
+              <h3>Total</h3>
+              <div className="stat-number">{challenges.total}</div>
+            </div>
+            <div className="stat-card">
+              <h3>Streak</h3>
+              <div className="stat-number">{challenges.streak}</div>
+            </div>
           </div>
-
-          <div className="challenges-tabs">
-            <button 
-              className={`tab ${activeTab === 'daily' ? 'active' : ''}`}
-              onClick={() => setActiveTab('daily')}
-            >
-              Daily Challenge
-            </button>
-            <button 
-              className={`tab ${activeTab === 'weekly' ? 'active' : ''}`}
-              onClick={() => setActiveTab('weekly')}
-            >
-              Weekly Challenges
-            </button>
-            <button 
-              className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
-              onClick={() => setActiveTab('calendar')}
-            >
-              Calendar
-            </button>
-          </div>
-
-          {activeTab === 'daily' ? (
-            renderDailyChallenge()
-          ) : activeTab === 'weekly' ? (
-            renderWeeklyChallenges()
-          ) : (
-            <div className="calendar-challenges-tab">
-              <div className="calendar-header">
-                <h2>30-Day Challenge Calendar</h2>
-                <p>Complete one challenge each day to build lasting confidence and skills.</p>
-                <div className="progress-stats">
-                  <div className="stat-card">
-                    <h3>Challenges Completed</h3>
-                    <p className="stat-number">{challenges.completed}/{challenges.total}</p>
-                  </div>
-                  <div className="stat-card">
-                    <h3>Current Streak</h3>
-                    <p className="stat-number">{challenges.streak} days</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="calendar-challenges">
-                {calendarChallenges.map(challenge => (
-                  <div 
-                    key={challenge.day} 
-                    className={`calendar-day ${challenge.completed ? 'completed' : ''}`}
-                  >
-                    <div className="day-number">Day {challenge.day}</div>
-                    <div className="day-content">
-                      <h3>{challenge.title}</h3>
-                      <p>{challenge.description}</p>
-                    </div>
+          <div className="challenges-grid">
+            {calendarChallenges.map(challenge => (
+              <div key={challenge.id} className={`calendar-day ${challenge.completed ? 'completed' : ''}`}>
+                <div className="day-number">Day {challenge.day}</div>
+                <div className="day-content">
+                  <h3>{challenge.title}</h3>
+                  <p>{challenge.description}</p>
+                  {!challenge.completed && (
                     <div className="day-action">
                       <button 
-                        className={`btn ${challenge.completed ? 'btn-success' : 'btn-primary'}`}
+                        className="btn btn-primary"
                         onClick={() => handleCalendarChallengeToggle(challenge.day)}
                       >
-                        {challenge.completed ? 'Completed' : 'Mark Complete'}
+                        Complete
                       </button>
                     </div>
-                  </div>
-                ))}
+                  )}
+                  {challenge.completed && (
+                    <div className="completed-state">
+                      <FaCheck />
+                      <span>Completed!</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </>
       ) : (
-        <div className="text-center p-5">
-          <p>Please select a child to view their challenges.</p>
+        <div className="alert alert-info">
+          Please select a child to view their challenges.
         </div>
       )}
     </div>

@@ -110,4 +110,223 @@
 .day-action .btn:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
+}
+
+.completed-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+}
+
+.completed-state .fa-check {
+  font-size: 2rem;
+  color: #28a745;
+}
+
+.completed-state span {
+  font-size: 1.1rem;
+  color: #28a745;
+  font-weight: 500;
+}
+
+.completed-state .btn-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.completed-state .btn-link:hover {
+  text-decoration: underline;
+}
+
+.child-selector {
+  background: var(--neutral-100);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.child-selector label {
+  font-weight: 500;
+  color: var(--neutral-700);
+  margin-bottom: 0;
+}
+
+.child-selector select {
+  max-width: 300px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-sm);
+  background-color: white;
+  font-size: 1rem;
+  color: var(--neutral-700);
+  cursor: pointer;
+  transition: border-color var(--transition-normal);
+}
+
+.child-selector select:hover {
+  border-color: var(--primary);
+}
+
+.child-selector select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+}
+
+.challenges-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.challenges-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.challenges-header h1 {
+  margin: 0;
+  color: var(--primary);
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--neutral-100);
+  padding: 1.5rem 2rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  min-width: 150px;
+}
+
+.stat-card h3 {
+  color: var(--neutral-600);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-number {
+  color: var(--primary);
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.challenges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.calendar-day {
+  background: var(--neutral-100);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.calendar-day:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.calendar-day.completed {
+  background: var(--success-light);
+}
+
+.day-number {
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.day-content h3 {
+  color: var(--neutral-700);
+  margin-bottom: 0.5rem;
+}
+
+.day-content p {
+  color: var(--neutral-500);
+  margin-bottom: 1rem;
+}
+
+.day-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.day-action .btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all var(--transition-normal);
+}
+
+.day-action .btn-primary {
+  background: var(--primary);
+  color: var(--neutral-100);
+  border: none;
+}
+
+.day-action .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.completed-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--success);
+  font-weight: 500;
+}
+
+.completed-state svg {
+  font-size: 1.25rem;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  font-size: 1.25rem;
+  color: var(--neutral-600);
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+}
+
+.alert-danger {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.alert-info {
+  background: var(--info-light);
+  color: var(--info);
+  border: 1px solid var(--info);
 } 

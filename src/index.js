@@ -2145,6 +2145,80 @@ router.post('/api/challenges/bulk', async (request, env) => {
   }
 });
 
+// Update child endpoint
+router.put('/api/children/:id', async (request, env) => {
+  try {
+    // Get the token from the Authorization header
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Extract the token
+    const token = authHeader.split(' ')[1];
+    
+    // Decode the token
+    let userData;
+    try {
+      userData = JSON.parse(atob(token));
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Get child ID from URL
+    const { id } = request.params;
+    
+    // Parse the request body
+    const data = await request.json();
+    
+    // Validate required fields
+    if (!data.name || !data.age || !data.ageGroup) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Verify child belongs to user
+    const child = await env.DB.prepare(
+      'SELECT * FROM children WHERE id = ? AND user_id = ?'
+    ).bind(id, userData.id).first();
+    
+    if (!child) {
+      return new Response(JSON.stringify({ error: 'Child not found or access denied' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Update the child
+    await env.DB.prepare(
+      'UPDATE children SET name = ?, age = ?, age_group = ? WHERE id = ? AND user_id = ?'
+    ).bind(data.name, data.age, data.ageGroup, id, userData.id).run();
+    
+    // Get updated child data
+    const updatedChild = await env.DB.prepare(
+      'SELECT id, name, age, age_group FROM children WHERE id = ?'
+    ).bind(id).first();
+    
+    return new Response(JSON.stringify(updatedChild), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+});
+
 // Export default function to handle requests
 export default {
   async fetch(request, env, ctx) {
