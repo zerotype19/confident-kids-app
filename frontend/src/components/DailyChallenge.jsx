@@ -39,16 +39,24 @@ const DailyChallenge = () => {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/challenges/${challenge.id}/complete`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          childId: challenge.childId,
+          completed: !challenge.completed
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to complete challenge');
+        throw new Error('Failed to update challenge status');
       }
 
-      const updatedChallenge = await response.json();
-      setChallenge(updatedChallenge);
+      const data = await response.json();
+      setChallenge({
+        ...challenge,
+        completed: !challenge.completed
+      });
     } catch (err) {
       setError(err.message);
     }
@@ -105,14 +113,12 @@ const DailyChallenge = () => {
           </ul>
         </div>
 
-        {!challenge.completed && (
-          <button 
-            className="btn btn-primary complete-challenge"
-            onClick={handleComplete}
-          >
-            <FaCheck /> Complete Challenge
-          </button>
-        )}
+        <button 
+          className={`btn ${challenge.completed ? 'btn-secondary' : 'btn-primary'} complete-challenge`}
+          onClick={handleComplete}
+        >
+          <FaCheck /> {challenge.completed ? 'Mark as Incomplete' : 'Complete Challenge'}
+        </button>
       </div>
     </div>
   );

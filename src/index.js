@@ -402,100 +402,145 @@ router.get('/api/users/profile', async (request, env) => {
 // Updated Dashboard Endpoint
 router.get('/api/dashboard', async (request, env) => {
   try {
-    // Verify JWT token and get user
     const user = await verifyAuth(request, env);
     if (!user) {
-      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Unauthorized' 
+      }), {
         status: 401,
-        headers: corsHeaders
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
-    
-    // Get user's children
-    const children = await env.DB.prepare(`
-      SELECT * FROM children WHERE user_id = ?
-    `).bind(user.id).all();
-    
-    // Default to first child if available
-    let selectedChildId = null;
-    if (children.results && children.results.length > 0) {
-      selectedChildId = children.results[0].id;
+
+    const { searchParams } = new URL(request.url);
+    const childId = searchParams.get('childId');
+
+    // If no child is selected, return a basic dashboard response
+    if (!childId) {
+      return new Response(JSON.stringify({
+        success: true,
+        overallProgress: 0,
+        activitiesCompleted: 0,
+        points: 0,
+        pillars: [],
+        todayChallenge: null,
+        hasChildren: false
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
     }
-    
-    // Get pillars data with progress information
+
+    // Verify child belongs to user
+    const child = await env.DB.prepare(
+      'SELECT * FROM children WHERE id = ? AND user_id = ?'
+    ).bind(childId, user.id).first();
+
+    if (!child) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Child not found or access denied' 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Get overall progress
+    const overallProgress = await env.DB.prepare(`
+      SELECT 
+        COUNT(*) as total_challenges,
+        SUM(CASE WHEN cc.child_id IS NOT NULL THEN 1 ELSE 0 END) as completed_challenges
+      FROM challenges c
+      LEFT JOIN challenge_completions cc ON c.id = cc.challenge_id AND cc.child_id = ?
+    `).bind(childId).first();
+
+    // Get activities completed count
+    const activitiesCompleted = await env.DB.prepare(`
+      SELECT COUNT(*) as count
+      FROM challenge_completions
+      WHERE child_id = ?
+    `).bind(childId).first();
+
+    // Get points earned
+    const points = await env.DB.prepare(`
+      SELECT COALESCE(SUM(points), 0) as total_points
+      FROM challenge_completions cc
+      JOIN challenges c ON cc.challenge_id = c.id
+      WHERE cc.child_id = ?
+    `).bind(childId).first();
+
+    // Get pillars with progress
     const pillars = await env.DB.prepare(`
-      SELECT p.id, p.name, p.short_description,
-        (SELECT COUNT(*) FROM progress pr 
-         WHERE pr.pillar_id = p.id AND pr.user_id = ? AND pr.completed = 1) as activitiesCompleted,
-        (SELECT COUNT(*) FROM content c WHERE c.pillar_id = p.id) as totalActivities
+      SELECT 
+        p.id,
+        p.name,
+        p.short_description,
+        COUNT(DISTINCT c.id) as total_activities,
+        COUNT(DISTINCT cc.challenge_id) as completed_activities
       FROM pillars p
-    `).bind(user.id).all();
-    
-    // Calculate progress for each pillar
-    const pillarsWithProgress = pillars.results.map(pillar => {
-      const progress = pillar.totalActivities > 0 
-        ? Math.round((pillar.activitiesCompleted / pillar.totalActivities) * 100) 
-        : 0;
-      
-      return {
-        id: pillar.id,
-        name: pillar.name,
-        shortDescription: pillar.short_description,
-        progress: progress,
-        activitiesCompleted: pillar.activitiesCompleted,
-        totalActivities: pillar.totalActivities
-      };
-    });
-    
-    // Calculate overall progress
-    const totalActivities = pillarsWithProgress.reduce((sum, pillar) => sum + pillar.totalActivities, 0);
-    const completedActivities = pillarsWithProgress.reduce((sum, pillar) => sum + pillar.activitiesCompleted, 0);
-    const overallProgress = totalActivities > 0 
-      ? Math.round((completedActivities / totalActivities) * 100) 
-      : 0;
-    
+      LEFT JOIN challenges c ON p.id = c.pillar_id
+      LEFT JOIN challenge_completions cc ON c.id = cc.challenge_id AND cc.child_id = ?
+      GROUP BY p.id
+    `).bind(childId).all();
+
     // Get today's challenge
     const todayChallenge = await env.DB.prepare(`
-      SELECT * FROM challenges 
-      ORDER BY RANDOM() 
-      LIMIT 1
-    `).first();
-    
-    // If no challenges in database, provide a default one
-    const defaultChallenge = {
-      id: 'default-challenge',
-      title: 'Daily Confidence Challenge',
-      description: 'Ask your child about something they feel confident doing today and encourage them to teach you about it.',
-      pillarId: 1
-    };
-    
-    // Get user points
-    const userPoints = await env.DB.prepare(`
-      SELECT points FROM users WHERE id = ?
-    `).bind(user.id).first();
-    
+      SELECT 
+        c.id,
+        c.title,
+        c.description,
+        CASE WHEN cc.child_id IS NOT NULL THEN 1 ELSE 0 END as completed
+      FROM challenges c
+      LEFT JOIN challenge_completions cc ON c.id = cc.challenge_id AND cc.child_id = ?
+      WHERE c.id = (
+        SELECT id FROM challenges 
+        ORDER BY RANDOM() 
+        LIMIT 1
+      )
+    `).bind(childId).first();
+
+    // Calculate overall progress percentage
+    const overallProgressPercentage = overallProgress.total_challenges > 0
+      ? Math.round((overallProgress.completed_challenges / overallProgress.total_challenges) * 100)
+      : 0;
+
+    // Format pillars data
+    const formattedPillars = pillars.results.map(pillar => ({
+      id: pillar.id,
+      name: pillar.name,
+      shortDescription: pillar.short_description,
+      progress: pillar.total_activities > 0
+        ? Math.round((pillar.completed_activities / pillar.total_activities) * 100)
+        : 0,
+      activitiesCompleted: pillar.completed_activities,
+      totalActivities: pillar.total_activities
+    }));
+
     return new Response(JSON.stringify({
-      overallProgress: overallProgress,
-      activitiesCompleted: completedActivities,
-      points: userPoints ? userPoints.points : 0,
-      todayChallenge: todayChallenge || defaultChallenge,
-      pillars: pillarsWithProgress
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
+      success: true,
+      overallProgress: overallProgressPercentage,
+      activitiesCompleted: activitiesCompleted.count,
+      points: points.total_points,
+      pillars: formattedPillars,
+      todayChallenge: {
+        id: todayChallenge.id,
+        title: todayChallenge.title,
+        description: todayChallenge.description,
+        completed: todayChallenge.completed === 1
       }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
     return new Response(JSON.stringify({ 
-      message: error.message,
-      stack: error.stack 
+      success: false, 
+      error: error.message 
     }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 });
@@ -1065,6 +1110,37 @@ async function checkAndUpdateAchievements(userId, childId, env) {
 // Pillars endpoints
 router.get('/api/pillars', async (request, env) => {
   try {
+    // Get childId from URL search params
+    const url = new URL(request.url);
+    const childId = url.searchParams.get('childId');
+
+    // Get pillars with progress if childId is provided
+    if (childId) {
+      const pillars = await env.DB.prepare(`
+        SELECT p.*,
+               (SELECT COUNT(*) FROM challenge_completions cc 
+                JOIN challenges c ON c.id = cc.challenge_id 
+                WHERE c.pillar_id = p.id AND cc.child_id = ?) as completed_challenges,
+               (SELECT COUNT(*) FROM challenges WHERE pillar_id = p.id) as total_challenges
+        FROM pillars p
+        ORDER BY p.id
+      `).bind(childId).all();
+
+      // Calculate progress for each pillar
+      const pillarsWithProgress = pillars.results.map(pillar => ({
+        ...pillar,
+        progress: pillar.total_challenges > 0 
+          ? Math.round((pillar.completed_challenges / pillar.total_challenges) * 100) 
+          : 0
+      }));
+
+      return new Response(JSON.stringify(pillarsWithProgress), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // If no childId, return basic pillar data
     const pillars = await env.DB.prepare(
       'SELECT * FROM pillars ORDER BY id'
     ).all();
@@ -1244,7 +1320,7 @@ router.post('/api/challenges/:id/complete', async (request, env) => {
     }
 
     const { id } = request.params;
-    const { childId } = await request.json();
+    const { childId, completed } = await request.json();
 
     // Verify child belongs to user
     const child = await env.DB.prepare(
@@ -1261,22 +1337,44 @@ router.post('/api/challenges/:id/complete', async (request, env) => {
       });
     }
 
-    // Mark challenge as complete
-    await env.DB.prepare(
-      'INSERT INTO challenge_completions (challenge_id, child_id, completed_at) VALUES (?, ?, ?)'
-    ).bind(id, childId, new Date().toISOString()).run();
+    // Check if completion record exists
+    const existingCompletion = await env.DB.prepare(
+      'SELECT * FROM challenge_completions WHERE challenge_id = ? AND child_id = ?'
+    ).bind(id, childId).first();
+
+    if (existingCompletion) {
+      if (completed) {
+        // Update existing completion
+        await env.DB.prepare(
+          'UPDATE challenge_completions SET completed_at = ? WHERE challenge_id = ? AND child_id = ?'
+        ).bind(new Date().toISOString(), id, childId).run();
+      } else {
+        // Delete the completion record
+        await env.DB.prepare(
+          'DELETE FROM challenge_completions WHERE challenge_id = ? AND child_id = ?'
+        ).bind(id, childId).run();
+      }
+    } else if (completed) {
+      // Create new completion record
+      await env.DB.prepare(
+        'INSERT INTO challenge_completions (challenge_id, child_id, user_id, completed_at) VALUES (?, ?, ?, ?)'
+      ).bind(id, childId, user.id, new Date().toISOString()).run();
+    }
 
     // Check and update achievements
-    await checkAndUpdateAchievements(user.id, childId, env);
+    if (completed) {
+      await checkAndUpdateAchievements(user.id, childId, env);
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: 'Challenge completed successfully' 
+      message: completed ? 'Challenge marked as complete' : 'Challenge marked as incomplete'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
+    console.error('Error completing challenge:', error);
     return new Response(JSON.stringify({ 
       success: false, 
       error: error.message 

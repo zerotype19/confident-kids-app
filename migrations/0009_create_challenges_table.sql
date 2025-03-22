@@ -9,11 +9,19 @@ CREATE TABLE IF NOT EXISTS challenges (
     FOREIGN KEY (pillar_id) REFERENCES pillars(id)
 );
 
--- Insert the pillar first
-INSERT OR IGNORE INTO pillars (id, name, slug, description) VALUES
-    (1, 'Confidence Building', 'confidence-building', 'Activities to help build self-confidence and self-esteem');
+-- Add difficulty_level column to challenges table if it doesn't exist
+ALTER TABLE challenges ADD COLUMN difficulty_level INTEGER DEFAULT 1;
 
--- Insert initial challenges with difficulty levels
+-- Insert the pillar first
+INSERT OR IGNORE INTO pillars (id, name, short_description) VALUES
+    (1, 'Confidence Building', 'Activities to help build self-confidence and self-esteem');
+
+-- Update existing challenges with difficulty levels
+UPDATE challenges SET difficulty_level = 1 WHERE id IN ('chal1', 'chal3', 'chal6');
+UPDATE challenges SET difficulty_level = 2 WHERE id IN ('chal2', 'chal4', 'chal7');
+UPDATE challenges SET difficulty_level = 3 WHERE id IN ('chal5', 'chal8');
+
+-- Insert any missing challenges
 INSERT OR IGNORE INTO challenges (id, pillar_id, title, description, difficulty_level) VALUES
     ('chal1', 1, 'Choose Your Clothes', 'Pick out your clothes for tomorrow all by yourself!', 1),
     ('chal2', 1, 'Growth Mindset Activity', 'Try something new and tell yourself "I can learn this!"', 2),

@@ -16,6 +16,7 @@ import Rewards from './components/Rewards';
 import Home from './components/Home';
 import Profile from './components/Profile';
 import Challenges from './pages/Challenges';
+import ChallengeDetail from './components/ChallengeDetail';
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -68,6 +69,11 @@ const App = () => {
             <Route path="/challenges" element={
               <ProtectedRoute>
                 <Challenges />
+              </ProtectedRoute>
+            } />
+            <Route path="/challenges/:challengeId" element={
+              <ProtectedRoute>
+                <ChallengeDetail />
               </ProtectedRoute>
             } />
             <Route path="/subscription" element={

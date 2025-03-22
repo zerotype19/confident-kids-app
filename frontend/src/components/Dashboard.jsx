@@ -22,7 +22,12 @@ const Dashboard = () => {
           setSelectedChild(currentUser.children[0].id);
         }
         
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/dashboard`, {
+        // Only include childId in the URL if a child is selected
+        const url = selectedChild 
+          ? `${process.env.REACT_APP_API_URL}/api/dashboard?childId=${selectedChild}`
+          : `${process.env.REACT_APP_API_URL}/api/dashboard`;
+        
+        const response = await fetch(url, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -45,7 +50,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [currentUser]);
+  }, [currentUser, selectedChild]);
 
   const handleChildChange = (e) => {
     setSelectedChild(e.target.value);
@@ -88,66 +93,75 @@ const Dashboard = () => {
             </select>
           </div>
           
-          <div className="dashboard-stats">
-            <div className="stat-card">
-              <FaChartLine className="mb-2" size={24} />
-              <div className="stat-value">{dashboardData.overallProgress}%</div>
-              <div className="stat-label">Overall Progress</div>
-            </div>
-            
-            <div className="stat-card">
-              <FaCalendarAlt className="mb-2" size={24} />
-              <div className="stat-value">{dashboardData.activitiesCompleted}</div>
-              <div className="stat-label">Activities Completed</div>
-            </div>
-            
-            <div className="stat-card">
-              <FaTrophy className="mb-2" size={24} />
-              <div className="stat-value">{isPremium ? dashboardData.points : 'Locked'}</div>
-              <div className="stat-label">Reward Points {!isPremium && <span className="premium-badge">PRO</span>}</div>
-            </div>
-          </div>
-          
-          <div className="today-challenge">
-            <h2>Today's Challenge</h2>
-            <div className="challenge-container">
-              <h3 className="challenge-title">{dashboardData.todayChallenge.title}</h3>
-              <p className="challenge-description">{dashboardData.todayChallenge.description}</p>
-              <Link to={`/challenges/${dashboardData.todayChallenge.id}`} className="btn btn-primary mt-3">
-                Start Challenge
-              </Link>
-            </div>
-          </div>
-          
-          <h2 className="mt-5 mb-3">Confidence Pillars</h2>
-          <div className="grid-3">
-            {dashboardData.pillars.map((pillar) => (
-              <div key={pillar.id} className={`pillar-card pillar-card-${pillar.id}`}>
-                <div className="pillar-card-header">
-                  <h3>{pillar.name}</h3>
+          {selectedChild ? (
+            <>
+              <div className="dashboard-stats">
+                <div className="stat-card">
+                  <FaChartLine className="mb-2" size={24} />
+                  <div className="stat-value">{dashboardData.overallProgress}%</div>
+                  <div className="stat-label">Overall Progress</div>
                 </div>
-                <div className="pillar-card-body">
-                  <p>{pillar.shortDescription}</p>
-                  <div className="progress-label">
-                    <span>Progress</span>
-                    <span>{pillar.progress}%</span>
-                  </div>
-                  <div className="progress-container">
-                    <div 
-                      className={`progress-bar progress-bar-${pillar.id}`} 
-                      style={{ width: `${pillar.progress}%` }}
-                    ></div>
-                  </div>
+                
+                <div className="stat-card">
+                  <FaCalendarAlt className="mb-2" size={24} />
+                  <div className="stat-value">{dashboardData.activitiesCompleted}</div>
+                  <div className="stat-label">Activities Completed</div>
                 </div>
-                <div className="pillar-card-footer">
-                  <span>{pillar.activitiesCompleted}/{pillar.totalActivities} Activities</span>
-                  <Link to={`/pillars/${pillar.id}`} className="btn btn-sm btn-outline">
-                    Explore
+                
+                <div className="stat-card">
+                  <FaTrophy className="mb-2" size={24} />
+                  <div className="stat-value">{isPremium ? dashboardData.points : 'Locked'}</div>
+                  <div className="stat-label">Reward Points {!isPremium && <span className="premium-badge">PRO</span>}</div>
+                </div>
+              </div>
+              
+              <div className="today-challenge">
+                <h2>Today's Challenge</h2>
+                <div className="challenge-container">
+                  <h3 className="challenge-title">{dashboardData.todayChallenge.title}</h3>
+                  <p className="challenge-description">{dashboardData.todayChallenge.description}</p>
+                  <Link to={`/challenges/${dashboardData.todayChallenge.id}`} className="btn btn-primary mt-3">
+                    Start Challenge
                   </Link>
                 </div>
               </div>
-            ))}
-          </div>
+              
+              <h2 className="mt-5 mb-3">Confidence Pillars</h2>
+              <div className="grid-3">
+                {dashboardData.pillars.map((pillar) => (
+                  <div key={pillar.id} className={`pillar-card pillar-card-${pillar.id}`}>
+                    <div className="pillar-card-header">
+                      <h3>{pillar.name}</h3>
+                    </div>
+                    <div className="pillar-card-body">
+                      <p>{pillar.shortDescription}</p>
+                      <div className="progress-label">
+                        <span>Progress</span>
+                        <span>{pillar.progress}%</span>
+                      </div>
+                      <div className="progress-container">
+                        <div 
+                          className={`progress-bar progress-bar-${pillar.id}`} 
+                          style={{ width: `${pillar.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div className="pillar-card-footer">
+                      <span>{pillar.activitiesCompleted}/{pillar.totalActivities} Activities</span>
+                      <Link to={`/pillars/${pillar.id}`} className="btn btn-sm btn-outline">
+                        Explore
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="alert alert-info mt-4">
+              <h4>Select a Child</h4>
+              <p>Please select a child from the dropdown above to view their dashboard.</p>
+            </div>
+          )}
         </>
       ) : (
         <div className="alert alert-info mt-4">
