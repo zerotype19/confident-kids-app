@@ -103,10 +103,10 @@ const router = {
 
 // CORS headers for all responses
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',  // For development; in production, use your specific domain
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-auth-token',
-  'Access-Control-Allow-Credentials': 'true'  // Add this if you're using credentials
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Max-Age': '86400'
 };
 
 // Test endpoint
