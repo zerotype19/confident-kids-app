@@ -83,30 +83,32 @@ const Profile = () => {
   const handleAddChild = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
       // Determine age group based on age
-      const age = parseInt(newChild.age);
-      let age_group = 'toddler';
-      if (age >= 5 && age <= 12) {
-        age_group = 'elementary';
-      } else if (age > 12) {
-        age_group = 'teen';
+      let ageGroup;
+      if (newChild.age >= 2 && newChild.age <= 5) {
+        ageGroup = 'Toddler';
+      } else if (newChild.age >= 6 && newChild.age <= 12) {
+        ageGroup = 'Elementary';
+      } else if (newChild.age >= 13 && newChild.age <= 18) {
+        ageGroup = 'Teen';
+      } else {
+        throw new Error('Age must be between 2 and 18');
       }
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/children`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           ...newChild,
-          age_group,
-          created_at: Math.floor(Date.now() / 1000)
+          ageGroup
         })
       });
 
@@ -115,48 +117,47 @@ const Profile = () => {
       }
 
       const data = await response.json();
-      
-      // Update profile with new child
       setProfile(prev => ({
         ...prev,
-        children: [...(prev.children || []), data.child]
+        children: [...prev.children, data.child]
       }));
-
-      // Reset form and hide it
-      setNewChild({ name: '', age: '', age_group: '' });
+      setNewChild({ name: '', age: '' });
       setShowAddChildForm(false);
-    } catch (err) {
-      console.error('Error adding child:', err);
-      setError(err.message);
+    } catch (error) {
+      console.error('Error adding child:', error);
+      setError(error.message);
     }
   };
 
   const handleEditChild = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
       // Determine age group based on age
-      const age = parseInt(editingChild.age);
-      let age_group = 'toddler';
-      if (age >= 5 && age <= 12) {
-        age_group = 'elementary';
-      } else if (age > 12) {
-        age_group = 'teen';
+      let ageGroup;
+      if (editingChild.age >= 2 && editingChild.age <= 5) {
+        ageGroup = 'Toddler';
+      } else if (editingChild.age >= 6 && editingChild.age <= 12) {
+        ageGroup = 'Elementary';
+      } else if (editingChild.age >= 13 && editingChild.age <= 18) {
+        ageGroup = 'Teen';
+      } else {
+        throw new Error('Age must be between 2 and 18');
       }
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/children/${editingChild.id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           ...editingChild,
-          age_group
+          ageGroup
         })
       });
 
@@ -165,20 +166,16 @@ const Profile = () => {
       }
 
       const data = await response.json();
-      
-      // Update profile with edited child
       setProfile(prev => ({
         ...prev,
         children: prev.children.map(child => 
           child.id === editingChild.id ? data.child : child
         )
       }));
-
-      // Reset editing state
       setEditingChild(null);
-    } catch (err) {
-      console.error('Error updating child:', err);
-      setError(err.message);
+    } catch (error) {
+      console.error('Error updating child:', error);
+      setError(error.message);
     }
   };
 
@@ -188,7 +185,7 @@ const Profile = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -204,14 +201,13 @@ const Profile = () => {
         throw new Error('Failed to delete child');
       }
 
-      // Update profile by removing the deleted child
       setProfile(prev => ({
         ...prev,
         children: prev.children.filter(child => child.id !== childId)
       }));
-    } catch (err) {
-      console.error('Error deleting child:', err);
-      setError(err.message);
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      setError(error.message);
     }
   };
 

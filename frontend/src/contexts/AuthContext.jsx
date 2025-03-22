@@ -205,7 +205,7 @@ export function AuthProvider({ children }) {
   async function updateProfile(userData) {
     try {
       setError('');
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       
       if (!token) {
         throw new Error('Not authenticated');
@@ -250,7 +250,7 @@ export function AuthProvider({ children }) {
 
     async function loadUserData() {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         if (token) {
           const userData = await fetchCurrentUser();
           if (mounted) {
